@@ -1,0 +1,39 @@
+SUBMIT A CHOICE / ANSWER A QUESTION
+localhost:8080/api/users/choices POST
+
+user = Casey5
+question = What is a DOM
+quiz = HTML
+choices = 1st is true, 2nd is false
+{
+"userId": "59e51b41c5944e09d2bc9036",
+"questionId": "59e651e1c7bea3a51c15d900",
+"quizId": "59e651e1c7bea3a51c15d8fe",
+"choiceIds": [ "59e651e1c7bea3a51c15d904" ]
+}
+
+{
+"userId": "59e51b41c5944e09d2bc9036",
+"questionId": "59e651e1c7bea3a51c15d900",
+"quizId": "59e651e1c7bea3a51c15d8fe",
+"choiceIds": [ "59e651e1c7bea3a51c15d903" ]
+}
+
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+CHECK ACCURACY OF A CHOICE
+localhost:8080/api/users/:id/choices PUT
+
+{
+  "quizId": "$id": "59e651e1c7bea3a51c15d8fe",
+  "userId": "$id": "59e51b41c5944e09d2bc9036",
+  "choices": [
+    {
+      "id": "59e6b14d4ea2e3c7a83e90eb",
+      "questionId": "59e651e1c7bea3a51c15d900",
+      "choices": [
+          { "$id": "59e6b14d4ea2e3c7a83e90ec" }
+      ]
+    }
+  ]
+}
