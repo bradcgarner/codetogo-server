@@ -213,20 +213,31 @@ router.put('/:id', jsonParser, jwtAuth, (req, res) => {
 });
 
 // update a user data (any data other than credentials)
-router.put('/:id/data', jsonParser, jwtAuth, (req, res) => { // add back jwtAuth
+router.put('/:id/data', jwtAuth, jsonParser, (req, res) => {  
   const updateUser = req.body;
-  console.log('req.body', req.body);
+  console.log('req.params.id', req.params.id);
+  console.log('req.body at :id/data', req.body);
   console.log('updateUser', updateUser);
-  return User.findByIdAndUpdate(req.params.id,
-    { $set: updateUser },
+
+
+  // Tank.findByIdAndUpdate(id, { $set: { size: 'large' }}, { new: true }, function (err, tank) {
+  //   if (err) return handleError(err);
+  //   res.send(tank);
+  // });
+
+  User.findByIdAndUpdate(req.params.id,
+    { $set: {quizzes: updateUser.quizzes } }, // recent: updateUser.recent
     { new: true },
     function (err, user) {
-      if (err) return res.send(err);
-      const filteredUser = removeArchivedQuizzes(user.apiRepr());      
+      if (err) return res.status(500).json({message: 'user not found', error: err});
+      console.log('found');
+      const filteredUser = removeArchivedQuizzes(user.apiRepr());    
+      console.log('filteredUser', filteredUser);
       res.status(201).json(filteredUser);
-    }
-  ) // end findByIdAndUpdate
+    }); // end findByIdAndUpdate
+    // .then(()=>{})
     // .catch(err => {
+    //   console.log('err',err);
     //   if (err.reason === 'ValidationError') {
     //     return res.status(err.code).json(err);
     //   }
@@ -235,7 +246,7 @@ router.put('/:id/data', jsonParser, jwtAuth, (req, res) => { // add back jwtAuth
 });
 
 // get user by id, do NOT return archived quizzes
-router.get('/user/:userId', (req, res) => {
+router.get('/user/:userId', jwtAuth, (req, res) => {
   console.log('res', res);
   return User.findById(req.params.userId)
     .then(user => {

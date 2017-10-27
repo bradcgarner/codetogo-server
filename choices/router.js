@@ -27,10 +27,11 @@ const choiceApiRepr = choice => { // improve this to use apply()
   return { 
     userId: choice.userId,
     questionId: choice.questionId,
-    quizId: choice.username,
+    quizId: choice.quizId,
     choices: choice.choices,
     correct: choice.correct,
-    id: choice._id 
+    id: choice._id, 
+    attempt: choice.attempt,
   };
 };
 
@@ -47,7 +48,7 @@ router.post('/', jsonParser, jwtAuth, (req, res)=> {
   let correct;
 
   // FIND QUESTION AND SCORE CHOICE
-  return Question.findById( questionId )
+  Question.findById( questionId )
     .then(question=>{
       const questionIds = formatQuestionOptionIds(question);     // format answers as a sorted string
       correct = questionIds === formattedChoices;   // compare, return true or false, hoist
@@ -68,7 +69,7 @@ router.post('/', jsonParser, jwtAuth, (req, res)=> {
       console.log('choices found', choices);
       const formattedChoices = choices.map(choice=>choiceApiRepr(choice));
       console.log('formatted choices found', formattedChoices);
-      return res.status(200).json(formattedChoices);
+      res.status(200).json(formattedChoices);
     })
     .catch(err => {
       console.log(err);
