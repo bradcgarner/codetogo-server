@@ -5,9 +5,6 @@
 const express = require('express');
 const router = express.Router();
 
-var qs = require('qs');
-var assert = require('assert');
-
 const { User, } = require('./models');
 
 const bodyParser = require('body-parser');
@@ -17,13 +14,27 @@ const passport = require('passport');
 const jwt = require('jsonwebtoken');
 const jwtAuth = passport.authenticate('jwt', { session: false });
 
-function validateUserFields(user) {
-  // split this into 3 PURE helper functions
+const validateUserFieldsPresent = user => {
+  const requiredFields = ['username', 'password', 'firstName', 'lastName'];
+  const missingField = requiredFields.find(field => !(field in user));
+  console.log('new user request body', user);
+  console.log('new user missing field', missingField);
+  if (missingField) {
+    return {
+      code: 422,
+      reason: 'ValidationError',
+      message: 'Missing field',
+      location: missingField
+    };
+  }
+  return true;
+};
+
+const validateUserFieldsString = user => {
   const stringFields = ['username', 'password', 'firstName', 'lastName'];
   const nonStringField = stringFields.find(
     field => field in user && typeof user[field] !== 'string'
   );
-
   if (nonStringField) {
     return {
       code: 422,
@@ -32,12 +43,14 @@ function validateUserFields(user) {
       location: nonStringField
     };
   }
+  return true;
+};  
 
+const validateUserFieldsTrimmed = user => {
   const explicityTrimmedFields = ['username', 'password'];
   const nonTrimmedField = explicityTrimmedFields.find(
     field => user[field].trim() !== user[field]
   );
-
   if (nonTrimmedField) {
     return {
       code: 422,
@@ -46,7 +59,10 @@ function validateUserFields(user) {
       location: nonTrimmedField
     };
   }
+  return true ;
+};  
 
+const validateUserFieldsSize = user => {  
   const sizedFields = {
     username: { min: 1 },
     password: { min: 10, max: 72 }
@@ -70,66 +86,28 @@ function validateUserFields(user) {
       location: tooSmallField || tooLargeField
     };
   }
+  return true ;
+};  
 
-  return { valid: true };
-}
+const validateUserFields = (user, type) => { // type = new or existing
+  if (!(validateUserFieldsPresent(user)) && type === 'new') {
+    return validateUserFieldsPresent(user); 
 
-function confirmUniqueUsername(username) {
-  return User.find({ username })
-    .count()
-    .then(count => {
-      if (count > 0) {
-        return Promise.reject({
-          code: 422,
-          reason: 'ValidationError',
-          message: 'Username already takken',
-          location: 'username'
-        });
-      } else {
-        return Promise.resolve();
-      }
-    });
-}
+  } else if (!(validateUserFieldsString(user)) ) {
+    return validateUserFieldsString(user);
 
-// quizzes are archived is a user clicks 'delete quiz'
-const removeArchivedQuizzes = user => {
-  console.log('removeArchivedQuizzes start',user);
-  const userQuizzes = user.quizzes;
-  const noArchiveQuizzes = userQuizzes.filter(quiz=>quiz.archive !== true);
-  user.quizzes = noArchiveQuizzes;
-  console.log('removeArchivedQuizzes end',user);
-  return user;  
+  } else if (!(validateUserFieldsTrimmed(user)) ) {
+    return validateUserFieldsTrimmed(user);
+
+  } else if (!(validateUserFieldsSize(user)) ) {
+    return validateUserFieldsSize(user);
+
+  } else {
+    return true;
+  }
 };
 
-// @@@@@@@@@@@@@@ END HELPERS, START ENDPOINTS @@@@@@@@@@@@
-
-// create a new user
-router.post('/', jsonParser, (req, res) => {
-  const requiredFields = ['username', 'password', 'firstName', 'lastName'];
-  const missingField = requiredFields.find(field => !(field in req.body));
-  console.log('new user request body', req.body);
-  console.log('new user missing field', missingField);
-  // only used when creating user
-  if (missingField) {
-    return res.status(422).json({
-      code: 422,
-      reason: 'ValidationError',
-      message: 'Missing field',
-      location: missingField
-    });
-  }
-  let userValid = {};
-  // used whenever changing or creating user
-  if (validateUserFields(req.body).valid === true) {
-    userValid = req.body;
-  } else {
-    let code = validateUserFields(req.body).code || 422;
-    return res.status(code).json(validateUserFields(req.body));
-  }
-
-  console.log('user validated');
-  let { username, password, lastName, firstName } = userValid;
-
+function confirmUniqueUsername(username) {
   return User.find({ username })
     .count()
     .then(count => {
@@ -140,7 +118,30 @@ router.post('/', jsonParser, (req, res) => {
           message: 'Username already taken',
           location: 'username'
         });
+      } else {
+        return Promise.resolve();
       }
+    });
+}
+
+// @@@@@@@@@@@@@@ END HELPERS, START ENDPOINTS @@@@@@@@@@@@
+
+// create a new user
+router.post('/', jsonParser, (req, res) => {
+  let userValid = {};
+  if (!(validateUserFields(req.body, 'new')) ) {
+    console.log('not valid',validateUserFields(req.body, 'new'));
+    let code = validateUserFields(req.body).code || 422;
+    return res.status(code).json(validateUserFields(req.body));
+  } else {
+    userValid = req.body;
+  }
+
+  console.log('user validated');
+  let { username, password, lastName, firstName } = userValid;
+
+  return confirmUniqueUsername(username)
+    .then(() => {
       return User.hashPassword(password);
     })
     .then(hash => {
@@ -161,48 +162,48 @@ router.post('/', jsonParser, (req, res) => {
 router.put('/:id', jsonParser, jwtAuth, (req, res) => {
 
   let userValid = {};
-  if (validateUserFields(req.body).valid === true) {
+  if (validateUserFields(req.body, 'existing') === true) {
     userValid = req.body;
   } else {
     let code = validateUserFields(req.body).code;
     return res.status(code).json(validateUserFields(req.body));
   }
 
-  return confirmUniqueUsername(userValid.username)
+  return confirmUniqueUsername(userValid.username) // returns Promise.resolve or .reject
     .then(() => {
-      return User.findById(req.params.id)
-        .count()
-        .then(count => {
-          if (count === 0) {
-            return Promise.reject({
-              code: 422,
-              reason: 'ValidationError',
-              message: 'User not found',
-              location: 'id'
-            });
-          }
-          if (userValid.password) {
-            return User.hashPassword(userValid.password);
-          } else {
-            return '';
-          }
-        })
-        .then((hash) => {
-          if (hash) {
-            userValid.password = hash;
-          }
-        })
-        .then(() => {
-          return User.findByIdAndUpdate(req.params.id,
-            { $set: userValid },
-            { new: true },
-            function (err, user) {
-              if (err) return res.send(err);
-              const filteredUser = removeArchivedQuizzes(user.apiRepr());
-              res.status(201).json(filteredUser);
-            }
-          );
+      return User.findById(req.params.id);
+    })
+    .count()
+    .then(count => {
+      if (count === 0) {
+        return Promise.reject({
+          code: 422,
+          reason: 'ValidationError',
+          message: 'User not found',
+          location: 'id'
         });
+      }
+      if (userValid.password) {
+        return User.hashPassword(userValid.password);
+      } else {
+        return false;
+      }
+    })
+    .then(hash => {
+      if (hash) {
+        userValid.password = hash;
+      }
+    })
+    .then(() => {
+      return User.findByIdAndUpdate(req.params.id,
+        { $set: userValid },
+        { new: true },
+        function (err, user) {
+          if (err) return res.send(err);
+          const filteredUser = user.apiRepr();
+          res.status(201).json(filteredUser);
+        }
+      );
     })
     .catch(err => {
       if (err.reason === 'ValidationError') {
@@ -219,38 +220,25 @@ router.put('/:id/data', jwtAuth, jsonParser, (req, res) => {
   console.log('req.body at :id/data', req.body);
   console.log('updateUser', updateUser);
 
-
-  // Tank.findByIdAndUpdate(id, { $set: { size: 'large' }}, { new: true }, function (err, tank) {
-  //   if (err) return handleError(err);
-  //   res.send(tank);
-  // });
-
   User.findByIdAndUpdate(req.params.id,
-    { $set: {quizzes: updateUser.quizzes } }, // recent: updateUser.recent
+    { $set: {quizzes: updateUser.quizzes, recent: updateUser.recent } }, // recent: updateUser.recent
     { new: true },
     function (err, user) {
+      console.log('err after err, user',err);
       if (err) return res.status(500).json({message: 'user not found', error: err});
       console.log('found');
-      const filteredUser = removeArchivedQuizzes(user.apiRepr());    
+      const filteredUser = user.apiRepr();    
       console.log('filteredUser', filteredUser);
       res.status(201).json(filteredUser);
-    }); // end findByIdAndUpdate
-    // .then(()=>{})
-    // .catch(err => {
-    //   console.log('err',err);
-    //   if (err.reason === 'ValidationError') {
-    //     return res.status(err.code).json(err);
-    //   }
-    //   res.status(500).json({ code: 500, message: 'Internal server error' });
-    // });
+    });
 });
 
-// get user by id, do NOT return archived quizzes
+// get user by id
 router.get('/user/:userId', jwtAuth, (req, res) => {
   console.log('res', res);
   return User.findById(req.params.userId)
     .then(user => {
-      const filteredUser = removeArchivedQuizzes(user.apiRepr());
+      const filteredUser = user.apiRepr();
       return res.status(200).json(filteredUser);
     })
     .catch(err => {
@@ -260,19 +248,6 @@ router.get('/user/:userId', jwtAuth, (req, res) => {
 });
 
 // @@@@@@@@@@@@@@@@@@ START ADMIN ENDPOINTS @@@@@@@@@@@@@@@@@
-
-// get user by id, DO return archived quizzes
-router.get('/user/:userId/history', (req, res) => {
-  console.log('res', res);
-  return User.findById(req.params.userId)
-    .then(user => {
-      return res.status(200).json(user.apiRepr());
-    })
-    .catch(err => {
-      console.log(err);
-      res.status(500).json({ code: 500, message: 'Internal server error' });
-    });
-});
 
 // get all users DANGER ZONE!!!!
 router.get('/', (req, res) => {

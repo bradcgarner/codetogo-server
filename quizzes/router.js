@@ -52,24 +52,25 @@ router.get('/:quizId', (req, res) => {
     });
 });
 
+const questionApiRepr = function (question) {
+  console.log('single question', question);
+  return { 
+    answers: question.answers.map(answer=> {
+      return {
+        option: answer.option,
+        id: answer._id
+      };
+    }), 
+    question: question.question,
+    inputType: question.inputType,
+    id: question._id };
+};
+
 // get all questions by quiz id
 router.get('/:quizId/questions/', (req, res) => {
   return Question.find({quizId: req.params.quizId})
     .then(questions => {
       console.log('unformatted', questions);
-      const questionApiRepr = function (question) {
-        console.log('single question', question);
-        return { 
-          answers: question.answers.map(answer=> {
-            return {
-              option: answer.option,
-              id: answer._id
-            };
-          }), 
-          question: question.question,
-          inputType: question.inputType,
-          id: question._id };
-      };
       const formattedQuestions = questions.map(question=>questionApiRepr(question));
       console.log('formattedQuestions',formattedQuestions);      
       return res.status(200).json(formattedQuestions);

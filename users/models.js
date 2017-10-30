@@ -10,17 +10,16 @@ const UserSchema = mongoose.Schema({
   lastName: { type: String, required: true },
   username: { type: String, required: true, unique: true },
   password: { type: String, required: true },
-  quizzes: [{
-    id: { type: mongoose.Schema.Types.ObjectId, ref: 'Quiz' },
-    name: { type: String },
-    attempt: { type: Number },
-    archive: { type: Boolean },
-    total: { type: Number },
-    completed: { type: Number },
-    correct: { type: Number },
-    category: {type: String },
-    difficulty: {type: Number }
-  }],
+  quizzes: Array,
+  //   id: { type: mongoose.Schema.Types.ObjectId, ref: 'Quiz' },
+  //   name: { type: String },
+  //   attempt: { type: Number },
+  //   archive: { type: Boolean },
+  //   total: { type: Number },
+  //   completed: { type: Number },
+  //   correct: { type: Number },
+  //   category: {type: String },
+  //   difficulty: {type: Number }
   badges: { type: String },
   recent: [{type: String}]
 });
