@@ -4,6 +4,7 @@ require('dotenv').config(); // this is unconditional, which will require heroku 
 
 module.exports = {
   PORT: process.env.PORT || 8080,
+  TEST_PORT: process.env.TEST_PORT || 8081,
   CLIENT_ORIGIN: process.env.CLIENT_ORIGIN || 'http://localhost:3000',
   DATABASE_URL:
                   process.env.DATABASE_URL || 'mongodb://localhost/code-quiz',

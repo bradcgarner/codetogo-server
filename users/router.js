@@ -16,18 +16,25 @@ const jwtAuth = passport.authenticate('jwt', { session: false });
 
 const validateUserFieldsPresent = user => {
   const requiredFields = ['username', 'password', 'firstName', 'lastName'];
-  const missingField = requiredFields.find(field => !(field in user));
-  console.log('new user request body', user);
+  // let missingField;
+  // requiredFields.forEach(field => {
+  //   if ()
+  // });
+  //   !(field in user));
+  const missingField = requiredFields.find(field => (!(field in user)));
   console.log('new user missing field', missingField);
   if (missingField) {
-    return {
-      code: 422,
-      reason: 'ValidationError',
+    console.log('missingfield', missingField);
+    const response = {
       message: 'Missing field',
       location: missingField
     };
+    console.log('response', response);
+    return response;
   }
-  return true;
+  console.log('true (no missing field)');
+  return 'ok';
+
 };
 
 const validateUserFieldsString = user => {
@@ -37,29 +44,31 @@ const validateUserFieldsString = user => {
   );
   if (nonStringField) {
     return {
-      code: 422,
-      reason: 'ValidationError',
       message: 'Incorrect field type: expected string',
       location: nonStringField
     };
   }
-  return true;
+  return 'ok';
 };  
 
 const validateUserFieldsTrimmed = user => {
+  console.log('checking trim');
   const explicityTrimmedFields = ['username', 'password'];
+  console.log('explicityTrimmedFields', explicityTrimmedFields);
   const nonTrimmedField = explicityTrimmedFields.find(
     field => user[field].trim() !== user[field]
   );
+  console.log('nonTrimmedField', nonTrimmedField);
+  console.log('non-trimmed', nonTrimmedField);
   if (nonTrimmedField) {
+    console.log('returning');
     return {
-      code: 422,
-      reason: 'ValidationError',
       message: 'Cannot start or end with whitespace',
       location: nonTrimmedField
     };
   }
-  return true ;
+  console.log('ok trim');
+  return 'ok' ;
 };  
 
 const validateUserFieldsSize = user => {  
@@ -78,32 +87,46 @@ const validateUserFieldsSize = user => {
 
   if (tooSmallField || tooLargeField) {
     return {
-      code: 422,
-      reason: 'ValidationError',
       message: tooSmallField
         ? `Must be at least ${sizedFields[tooSmallField].min} characters long`
         : `Must be at most ${sizedFields[tooLargeField].max} characters long`,
       location: tooSmallField || tooLargeField
     };
   }
-  return true ;
+  return 'ok' ;
 };  
 
 const validateUserFields = (user, type) => { // type = new or existing
-  if (!(validateUserFieldsPresent(user)) && type === 'new') {
-    return validateUserFieldsPresent(user); 
+  console.log('Present, String, Trimmed, Size1');  
+  const isPresentt = validateUserFieldsPresent(user);
+  const isStringg = validateUserFieldsString(user);
+  const isTrimmedd = validateUserFieldsTrimmed(user);
+  const isSize = validateUserFieldsSize(user);
+  console.log('Present, String, Trimmed, Size2');  
+  console.log(isPresentt);
+  console.log(isStringg);
+  console.log(isTrimmedd);
+  console.log(isSize);
+  
+  if (isPresentt !== 'ok' && type === 'new') {
+    console.log('present');
+    return isPresentt; 
 
-  } else if (!(validateUserFieldsString(user)) ) {
-    return validateUserFieldsString(user);
+  } else if (isStringg !== 'ok') {
+    console.log('string');
+    return isStringg;
 
-  } else if (!(validateUserFieldsTrimmed(user)) ) {
-    return validateUserFieldsTrimmed(user);
+  } else if (isTrimmedd !== 'ok' ) {
+    console.log('trimmed');
+    return isTrimmedd;
 
-  } else if (!(validateUserFieldsSize(user)) ) {
-    return validateUserFieldsSize(user);
+  } else if (isSize !== 'ok' ) {
+    console.log('size');
+    return isSize;
 
   } else {
-    return true;
+    console.log('final ok');
+    return 'ok';
   }
 };
 
@@ -113,7 +136,6 @@ function confirmUniqueUsername(username) {
     .then(count => {
       if (count > 0) {
         return Promise.reject({
-          code: 422,
           reason: 'ValidationError',
           message: 'Username already taken',
           location: 'username'
@@ -128,12 +150,17 @@ function confirmUniqueUsername(username) {
 
 // create a new user
 router.post('/', jsonParser, (req, res) => {
-  let userValid = {};
-  if (!(validateUserFields(req.body, 'new')) ) {
-    console.log('not valid',validateUserFields(req.body, 'new'));
-    let code = validateUserFields(req.body).code || 422;
-    return res.status(code).json(validateUserFields(req.body));
+  console.log('POST RUNNING');
+  console.log('new user request body', req.body);
+  const user = validateUserFields(req.body, 'new');
+  console.log('user AFTER VALIDATION', user);
+  let userValid;
+  if (user !== 'ok') {
+    console.log('not valid',user);
+    user.reason = 'ValidationError';
+    return res.status(422).json(user);
   } else {
+    console.log('valid');
     userValid = req.body;
   }
 
@@ -142,18 +169,24 @@ router.post('/', jsonParser, (req, res) => {
 
   return confirmUniqueUsername(username)
     .then(() => {
+      console.log('hash');
       return User.hashPassword(password);
     })
     .then(hash => {
+      console.log('create');
       return User.create({ username, password: hash, lastName, firstName });
     })
     .then(user => {
+      console.log('respond');
       return res.status(201).json(user.apiRepr());
     })
     .catch(err => {
+      console.log('catch');
       if (err.reason === 'ValidationError') {
-        return res.status(err.code).json(err);
+        console.log('validation error');
+        return res.status(422).json(err);
       }
+      console.log('500');
       res.status(500).json({ code: 500, message: 'Internal server error' });
     });
 });
@@ -161,13 +194,18 @@ router.post('/', jsonParser, (req, res) => {
 // update a user profile
 router.put('/:id', jsonParser, jwtAuth, (req, res) => {
 
-  let userValid = {};
-  if (validateUserFields(req.body, 'existing') === true) {
-    userValid = req.body;
+  const user = validateUserFields(req.body, 'new');
+  console.log('user AFTER VALIDATION', user);
+  let userValid;
+  if (user !== 'ok') {
+    console.log('not valid',user);
+    user.reason = 'ValidationError';
+    return res.status(422).json(user);
   } else {
-    let code = validateUserFields(req.body).code;
-    return res.status(code).json(validateUserFields(req.body));
+    console.log('valid');
+    userValid = req.body;
   }
+
 
   return confirmUniqueUsername(userValid.username) // returns Promise.resolve or .reject
     .then(() => {
