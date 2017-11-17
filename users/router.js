@@ -98,7 +98,7 @@ const validateUserFieldsSize = user => {
 
 const validateUserFields = (user, type) => { // type = new or existing
   console.log('Present, String, Trimmed, Size1');  
-  const isPresentt = validateUserFieldsPresent(user);
+  const isPresentt = type === 'new' ? validateUserFieldsPresent(user): 'ok';
   const isStringg = validateUserFieldsString(user);
   const isTrimmedd = validateUserFieldsTrimmed(user);
   const isSize = validateUserFieldsSize(user);
@@ -130,11 +130,13 @@ const validateUserFields = (user, type) => { // type = new or existing
   }
 };
 
-function confirmUniqueUsername(username) {
+function confirmUniqueUsername(username, type='new') {
   return User.find({ username })
     .count()
     .then(count => {
-      if (count > 0) {
+      const maxMatch = type === 'existingUser' ? 1 : 0 ;
+      console.log('count', count);
+      if (count > maxMatch) {
         return Promise.reject({
           reason: 'ValidationError',
           message: 'Username already taken',
@@ -193,8 +195,8 @@ router.post('/', jsonParser, (req, res) => {
 
 // update a user profile
 router.put('/:id', jsonParser, jwtAuth, (req, res) => {
-
-  const user = validateUserFields(req.body, 'new');
+  console.log('put req.body', req.body);
+  const user = validateUserFields(req.body, 'existingUser');
   console.log('user AFTER VALIDATION', user);
   let userValid;
   if (user !== 'ok') {
@@ -207,38 +209,36 @@ router.put('/:id', jsonParser, jwtAuth, (req, res) => {
   }
 
 
-  return confirmUniqueUsername(userValid.username) // returns Promise.resolve or .reject
+  return confirmUniqueUsername(userValid.username, 'existingUser') // returns Promise.resolve or .reject
     .then(() => {
-      return User.findById(req.params.id);
-    })
-    .count()
-    .then(count => {
-      if (count === 0) {
-        return Promise.reject({
-          code: 422,
-          reason: 'ValidationError',
-          message: 'User not found',
-          location: 'id'
-        });
-      }
+      console.log('confirm unique passed');      
       if (userValid.password) {
+        console.log('there is password');      
+        
         return User.hashPassword(userValid.password);
       } else {
+        console.log('no password');      
+        
         return false;
       }
     })
     .then(hash => {
+      console.log('hash');      
+      
       if (hash) {
         userValid.password = hash;
       }
     })
     .then(() => {
+      console.log('find by id and update');      
+      
       return User.findByIdAndUpdate(req.params.id,
         { $set: userValid },
         { new: true },
         function (err, user) {
           if (err) return res.send(err);
           const filteredUser = user.apiRepr();
+          console.log('filteredUser', filteredUser);
           res.status(201).json(filteredUser);
         }
       );
