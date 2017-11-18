@@ -6,7 +6,8 @@ const router = express.Router();
 const config = require('../config');
 const passport = require('passport');
 const jwt = require('jsonwebtoken');
-
+const { User } = require('../users');
+const {scoreQuizzes} = require('../quizzes');
 
 const createAuthToken = function (user) {
   return jwt.sign({ user }, config.JWT_SECRET, {
@@ -21,10 +22,22 @@ const jwtAuth = passport.authenticate('jwt', { session: false });
 
 router.post('/login', basicAuth, (req, res) => {
   const authToken = createAuthToken(req.user.apiRepr());
-  const { id , username, firstName, lastName,
-    quizzes, badges, recent  } = req.user.apiRepr();
-  res.json({ authToken , id , username, firstName, lastName,
-    quizzes, badges, recent });
+  let { id , username, firstName, lastName,
+    quizzes, badges, recent, lastSession  } = req.user.apiRepr();
+  if (lastSession.length > 0) {
+    quizzes = scoreQuizzes(quizzes, lastSession);
+    lastSession = [];
+    return User.findByIdAndUpdate(id,
+      { $push: {quizzes: quizzes, lastSession: [] } }, // later update recent
+      { new: true }
+    )
+      .then(user=>{
+        res.json(user.apiRepr());
+      });
+  } else {
+    res.json({ authToken , id , username, firstName, lastName,
+      quizzes, badges, recent, lastSession });
+  }
 });
 
 router.post('/refresh', jwtAuth, (req, res) => {

@@ -20,8 +20,9 @@ const UserSchema = mongoose.Schema({
   //   correct: { type: Number },
   //   category: {type: String },
   //   difficulty: {type: Number }
-  badges: { type: String },
-  recent: [{type: String}]
+  badges: Array,
+  recent: Array,
+  lastSession: Array
 });
 
 UserSchema.methods.apiRepr = function () {
@@ -32,7 +33,8 @@ UserSchema.methods.apiRepr = function () {
     quizzes: this.quizzes, 
     badges: this.badges, 
     recent: this.recent,
-    id: this._id 
+    lastSession: this.lastSession,
+    id: this._id
   };
 };
 

@@ -5,9 +5,9 @@
 const express = require('express');
 const router = express.Router();
 
-const { Choice, Quiz, Question } = require('./models');
-const { choiceApiRepr } = require('./choices');
-const { User } = require('./users');
+const { Quiz, Question } = require('./models');
+const { Choice, choiceApiRepr } = require('../choices');
+const { User } = require('../users');
 
 const bodyParser = require('body-parser');
 const jsonParser = bodyParser.json();
@@ -22,110 +22,136 @@ const calcCompletedAndCorrect = (choices) => {
   const completed = choices.length;
   console.log('completed',completed); 
   const choicesCorrect = choices.filter(choice => choice.correct === true );
-  console.log('choicesCorrect',choicesCorrect); 
+  console.log('choicesCorrect', choicesCorrect); 
   const correct = choicesCorrect.length;
   console.log('correct',correct); 
   return { correct, completed };
 };
 
+// input: all user quizzes, user quizzes last session
+// output: updated all user quizzes
+const scoreQuiz = (quizId, userId, attempt) => {
+  Choice.find({ quizId: quizId, userId: userId , attempt: attempt })
+    .then(choices=>{
+      console.log('choices[0]', choices[0]);
+      if(choices.length>0) {
+        return calcCompletedAndCorrect(choices);
+      } else {
+        console.log('no choices');
+        return;
+      }
+    });
+};
+
+
+const ensureLastSessionIsCurrent = returnQuiz => {
+  const matchingSession = returnQuiz.user.lastSession.find(quiz=>{
+    quiz.quizId === returnQuiz.quiz.id && quiz.attempt === returnQuiz.attempt;
+  });
+  if (!matchingSession) {
+    returnQuiz.user.lastSession.push({quizId: returnQuiz.quiz.quizId, userId: returnQuiz.user.userId, attempt: returnQuiz.quiz.attempt});      
+  }
+  return returnQuiz;
+};
+
+const mapChoicesOntoQuestions =(quiz, questions, choices) => {
+  const formattedChoices = choices.map(choice=>choiceApiRepr(choice)); // change _id to id
+  let oldQuestions = [];
+  let newQuestions = [];
+  // update quiz question list to include prior choices (as array of strings)
+  questions.forEach(question=>{
+    const choiceFound = formattedChoices.find(choice=>choice.questionId === question.questionId);
+    if (choiceFound) { 
+      question.choices = choiceFound.choices; 
+      question.correct = choiceFound.correct; 
+      oldQuestions.push(question);
+    } else {
+      newQuestions.push(question);
+    }
+  });
+  return {oldQuestions, newQuestions};
+};
+
 
 // TAKE OR ADD QUIZ
 // get quiz id, get user's choices if any, update user if needed
-router.put('/:quizId/users/:userId/add', jwtAuth, (req, res) => {
-  const [quizId, userId,] = [req.params.quizId, req.params.userId];
+// attempt will always be 0; included for consistency with sister endpoint
+router.put('/:quizId/users/:userId/:add/:attempt/:next', jwtAuth, (req, res) => {
+  const [quizId, userId, add, attempt, next] = [req.params.quizId, req.params.userId, req.params.add, req.params.attempt, req.params.next];
   const returnQuiz = {
-    quiz: {
-      attempt: 0, 
-      correct: 0, 
-      completed: 0,
-      archive: false,
-      oldQuestions: null,
-    },
+    quiz: null,
     user: null
   };
-  // find questions this quiz
-  return Question.find({quizId})
-    .then(questions => {
-      // format questions
-      let formattedQuestions = questions.map(question=>questionApiRepr(question));
-      returnQuiz.quiz.originalLength = formattedQuestions.length; 
-      returnQuiz.quiz.newQuestions = formattedQuestions;    
-      return Quiz.findById(quizId);  // should include id, name, total, category, difficulty
-    })
+  let formattedQuestions, mappedQuestions;
+
+  return Quiz.findById(quizId)// response should include id, name, total, category, difficulty
     .then(quiz=>{
-      return User.findByIdAndUpdate(userId,
-        { $push: {quizzes: quiz } }, // recent: updateUser.recent
-        { new: true },
-        function (err, user) {
-          // console.log('err after err, user',err);
-          if (err) return res.status(500).json({message: 'user not found', error: err});
-          // console.log('found');
-          returnQuiz.user = user.apiRepr();          
-          res.status(201).json(returnQuiz);
-        });
+      returnQuiz.quiz = quiz;
+      returnQuiz.quiz.attempt = attempt;
+      returnQuiz.quiz.archive = false;
+      console.log('returnQuiz',returnQuiz);
     })
-    .catch(err => {
-      res.status(500).json({ code: 500, message: 'Internal server error' });
-      // console.log(err);
-    });
-});
+    .then(()=>{
+      if (next !== 'take') {
+        return;
 
-
-router.put('/:quizId/users/:userId/take/:attempt', jwtAuth, (req, res) => {
-  const [quizId, userId, attempt] = [req.params.quizId, req.params.userId, req.params.attempt];
-  const returnQuiz = {
-    quiz: {
-      attempt, 
-      correct: 0, 
-      completed: 0,
-      oldQuestions: null,
-    }, 
-    user: null
-  };
-  let formattedChoices, formattedQuestions, newQuestions, oldQuestions;
-  // find questions this quiz
-  return Question.find({quizId})
-    .then(questions => {
-      // format questions
-      formattedQuestions = questions.map(question=>questionApiRepr(question));
-      returnQuiz.originalLength = formattedQuestions.length;      
-      // if user has made any prior attempts
-      if (!attempt) {
-        returnQuiz.quiz.newQuestions = formattedQuestions;
-        returnQuiz.quiz.total = formattedQuestions.length;
-        res.status(201).json(returnQuiz); 
       } else {
-        // find prior choices
-        return Choice.find({quizId, userId, attempt})
+        return Question.find({quizId})
+          .then(questions => {
+            // format questions
+            formattedQuestions = questions.map(question=>questionApiRepr(question));
+            returnQuiz.quiz.originalLength = formattedQuestions.length;  
+            
+            return Choice.find({ quizId: quizId, userId: userId , attempt: attempt });
+          })
           .then(choices => {
-            if (choices) {
-              formattedChoices = choices.map(choice=>choiceApiRepr(choice)); // change _id to id
-              // score quiz
-              const score = calcCompletedAndCorrect(formattedChoices);
-              returnQuiz.quiz.correct; score.correct;
-              returnQuiz.quiz.completed = score.completed; 
-              // update quiz question list to include prior choices (as array of strings)
-              formattedQuestions.forEach(question=>{
-                const theChoice = formattedChoices.find(choice=>choice.questionId === question.questionId);
-                if (theChoice) { 
-                  question.choices = theChoice.choices; 
-                  question.correct = theChoice.correct; 
-                  oldQuestions.push(question);
-                } else {
-                  newQuestions.push(question);
-                }
-              });
-              returnQuiz.quiz.total = newQuestions.length;
-              res.status(201).json(returnQuiz); 
+            if (choices.length <= 0 || !choices) {
+              returnQuiz.quiz.completed = 0;
+              returnQuiz.quiz.correct = 0;
+
+            } else {
+              let score = scoreQuiz(quizId, userId, attempt);
+              returnQuiz.quiz.completed = score.completed || 0;
+              returnQuiz.quiz.correct = score.correct || 0;
+              mappedQuestions = mapChoicesOntoQuestions(returnQuiz.quiz, formattedQuestions, choices);
             }
-          });        
-      } 
+
+            returnQuiz.quiz.total = returnQuiz.quiz.newQuestions.length;
+            
+          });
+      } // end else next === take
+    }) // end then (for next === take)
+    .then(()=>{
+      return User.findById(userId);
+    })
+
+    .then(user=>{
+      returnQuiz.user = user.apiRepr();
+      if (add === 'add') { returnQuiz.user.quizzes.push(returnQuiz.quiz); }
+      // this function mutates the object passed into it
+      // this adds the current quiz & attempt if not already on the last session
+      ensureLastSessionIsCurrent(returnQuiz);
+      
+      return User.findByIdAndUpdate(userId,
+        { $set: {quizzes: returnQuiz.user.quizzes, lastSession: returnQuiz.user.lastSession } }, // later update recent
+        { new: true }
+      );        
+    })
+
+    .then(()=>{
+      returnQuiz.quiz.oldQuestions = mappedQuestions.oldQuestions;
+      returnQuiz.quiz.newQuestions = mappedQuestions.newQuestions;
+      console.log('returnQuiz to send', returnQuiz); 
+      res.status(201).json(returnQuiz);  
     })
     .catch(err => {
-      res.status(500).json({ code: 500, message: 'Internal server error' });
-      // console.log(err);
+      res.status(500).json({ code: 500, message: `Internal server error ${err}` });
     });
 });
+
+
+
+
 
 // create put endpoint(s) to update quiz, including add comments (after MVP)
 router.put('/:quizId', jsonParser, jwtAuth, (req, res) => {
@@ -193,4 +219,4 @@ router.get('/:quizId/questions/', (req, res) => {
     });
 });
 
-module.exports = { router };
+module.exports = { router, scoreQuizzes };

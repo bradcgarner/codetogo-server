@@ -16,23 +16,18 @@ const jwtAuth = passport.authenticate('jwt', { session: false });
 
 const validateUserFieldsPresent = user => {
   const requiredFields = ['username', 'password', 'firstName', 'lastName'];
-  // let missingField;
-  // requiredFields.forEach(field => {
-  //   if ()
-  // });
-  //   !(field in user));
   const missingField = requiredFields.find(field => (!(field in user)));
-  console.log('new user missing field', missingField);
+  // console.log('new user missing field', missingField);
   if (missingField) {
-    console.log('missingfield', missingField);
+    // console.log('missingfield', missingField);
     const response = {
       message: 'Missing field',
       location: missingField
     };
-    console.log('response', response);
+    // console.log('response', response);
     return response;
   }
-  console.log('true (no missing field)');
+  // console.log('true (no missing field)');
   return 'ok';
 
 };
@@ -52,16 +47,16 @@ const validateUserFieldsString = user => {
 };  
 
 const validateUserFieldsTrimmed = user => {
-  console.log('checking trim');
+  // console.log('checking trim');
   const explicityTrimmedFields = ['username', 'password'];
-  console.log('explicityTrimmedFields', explicityTrimmedFields);
+  // console.log('explicityTrimmedFields', explicityTrimmedFields);
   const nonTrimmedField = explicityTrimmedFields.find(
     field => user[field].trim() !== user[field]
   );
-  console.log('nonTrimmedField', nonTrimmedField);
-  console.log('non-trimmed', nonTrimmedField);
+  // console.log('nonTrimmedField', nonTrimmedField);
+  // console.log('non-trimmed', nonTrimmedField);
   if (nonTrimmedField) {
-    console.log('returning');
+    // console.log('returning');
     return {
       message: 'Cannot start or end with whitespace',
       location: nonTrimmedField
@@ -97,35 +92,35 @@ const validateUserFieldsSize = user => {
 };  
 
 const validateUserFields = (user, type) => { // type = new or existing
-  console.log('Present, String, Trimmed, Size1');  
+  // console.log('Present, String, Trimmed, Size1');  
   const isPresentt = type === 'new' ? validateUserFieldsPresent(user): 'ok';
   const isStringg = validateUserFieldsString(user);
   const isTrimmedd = validateUserFieldsTrimmed(user);
   const isSize = validateUserFieldsSize(user);
-  console.log('Present, String, Trimmed, Size2');  
-  console.log(isPresentt);
-  console.log(isStringg);
-  console.log(isTrimmedd);
-  console.log(isSize);
+  // console.log('Present, String, Trimmed, Size2');  
+  // console.log(isPresentt);
+  // console.log(isStringg);
+  // console.log(isTrimmedd);
+  // console.log(isSize);
   
   if (isPresentt !== 'ok' && type === 'new') {
-    console.log('present');
+    // console.log('present');
     return isPresentt; 
 
   } else if (isStringg !== 'ok') {
-    console.log('string');
+    // console.log('string');
     return isStringg;
 
   } else if (isTrimmedd !== 'ok' ) {
-    console.log('trimmed');
+    // console.log('trimmed');
     return isTrimmedd;
 
   } else if (isSize !== 'ok' ) {
-    console.log('size');
+    // console.log('size');
     return isSize;
 
   } else {
-    console.log('final ok');
+    // console.log('final ok');
     return 'ok';
   }
 };
@@ -135,7 +130,7 @@ function confirmUniqueUsername(username, type='new') {
     .count()
     .then(count => {
       const maxMatch = type === 'existingUser' ? 1 : 0 ;
-      console.log('count', count);
+      // console.log('count', count);
       if (count > maxMatch) {
         return Promise.reject({
           reason: 'ValidationError',
@@ -152,85 +147,85 @@ function confirmUniqueUsername(username, type='new') {
 
 // create a new user
 router.post('/', jsonParser, (req, res) => {
-  console.log('POST RUNNING');
-  console.log('new user request body', req.body);
+  // console.log('POST RUNNING');
+  // console.log('new user request body', req.body);
   const user = validateUserFields(req.body, 'new');
-  console.log('user AFTER VALIDATION', user);
+  // console.log('user AFTER VALIDATION', user);
   let userValid;
   if (user !== 'ok') {
-    console.log('not valid',user);
+    // console.log('not valid',user);
     user.reason = 'ValidationError';
     return res.status(422).json(user);
   } else {
-    console.log('valid');
+    // console.log('valid');
     userValid = req.body;
   }
 
-  console.log('user validated');
+  // console.log('user validated');
   let { username, password, lastName, firstName } = userValid;
 
   return confirmUniqueUsername(username)
     .then(() => {
-      console.log('hash');
+      // console.log('hash');
       return User.hashPassword(password);
     })
     .then(hash => {
-      console.log('create');
+      // console.log('create');
       return User.create({ username, password: hash, lastName, firstName });
     })
     .then(user => {
-      console.log('respond');
+      // console.log('respond');
       return res.status(201).json(user.apiRepr());
     })
     .catch(err => {
-      console.log('catch');
+      // console.log('catch');
       if (err.reason === 'ValidationError') {
-        console.log('validation error');
+        // console.log('validation error');
         return res.status(422).json(err);
       }
-      console.log('500');
+      // console.log('500');
       res.status(500).json({ code: 500, message: 'Internal server error' });
     });
 });
 
 // update a user profile
 router.put('/:id', jsonParser, jwtAuth, (req, res) => {
-  console.log('put req.body', req.body);
+  // console.log('put req.body', req.body);
   const user = validateUserFields(req.body, 'existingUser');
-  console.log('user AFTER VALIDATION', user);
+  // console.log('user AFTER VALIDATION', user);
   let userValid;
   if (user !== 'ok') {
-    console.log('not valid',user);
+    // console.log('not valid',user);
     user.reason = 'ValidationError';
     return res.status(422).json(user);
   } else {
-    console.log('valid');
+    // console.log('valid');
     userValid = req.body;
   }
 
 
   return confirmUniqueUsername(userValid.username, 'existingUser') // returns Promise.resolve or .reject
     .then(() => {
-      console.log('confirm unique passed');      
+      // console.log('confirm unique passed');      
       if (userValid.password) {
-        console.log('there is password');      
+        // console.log('there is password');      
         
         return User.hashPassword(userValid.password);
       } else {
-        console.log('no password');      
+        // console.log('no password');      
         
         return false;
       }
     })
     .then(hash => {
-      console.log('hash');      
+      // console.log('hash');      
       
       if (hash) {
         userValid.password = hash;
       }
     })
     .then(() => {
-      console.log('find by id and update');      
+      // console.log('find by id and update');      
       
       return User.findByIdAndUpdate(req.params.id,
         { $set: userValid },
@@ -238,7 +233,7 @@ router.put('/:id', jsonParser, jwtAuth, (req, res) => {
         function (err, user) {
           if (err) return res.send(err);
           const filteredUser = user.apiRepr();
-          console.log('filteredUser', filteredUser);
+          // console.log('filteredUser', filteredUser);
           res.status(201).json(filteredUser);
         }
       );
@@ -254,33 +249,33 @@ router.put('/:id', jsonParser, jwtAuth, (req, res) => {
 // update a user data (any data other than credentials)
 router.put('/:id/data', jwtAuth, jsonParser, (req, res) => {  
   const updateUser = req.body;
-  console.log('req.params.id', req.params.id);
-  console.log('req.body at :id/data', req.body);
-  console.log('updateUser', updateUser);
+  // console.log('req.params.id', req.params.id);
+  // console.log('req.body at :id/data', req.body);
+  // console.log('updateUser', updateUser);
 
   User.findByIdAndUpdate(req.params.id,
     { $set: {quizzes: updateUser.quizzes, recent: updateUser.recent } }, // recent: updateUser.recent
     { new: true },
     function (err, user) {
-      console.log('err after err, user',err);
+      // console.log('err after err, user',err);
       if (err) return res.status(500).json({message: 'user not found', error: err});
-      console.log('found');
+      // console.log('found');
       const filteredUser = user.apiRepr();    
-      console.log('filteredUser', filteredUser);
+      // console.log('filteredUser', filteredUser);
       res.status(201).json(filteredUser);
     });
 });
 
 // get user by id
 router.get('/user/:userId', jwtAuth, (req, res) => {
-  console.log('res', res);
+  // console.log('res', res);
   return User.findById(req.params.userId)
     .then(user => {
       const filteredUser = user.apiRepr();
       return res.status(200).json(filteredUser);
     })
     .catch(err => {
-      console.log(err);
+      // console.log(err);
       res.status(500).json({ code: 500, message: 'Internal server error' });
     });
 });
@@ -289,7 +284,7 @@ router.get('/user/:userId', jwtAuth, (req, res) => {
 
 // get all users DANGER ZONE!!!!
 router.get('/', (req, res) => {
-  console.log(User.find());
+  // console.log(User.find());
   return User.find()
     .then(users => {
       let usersJSON = users.map(user=>user.apiRepr());
