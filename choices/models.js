@@ -19,7 +19,7 @@ ChoiceSchema.methods.apiRepr = function () {
     quizId: this.quizId,
     attempt: this.attempt,
     questionId: this.questionId,
-    choices: this.choices,
+    choices: this.choices, // array of answer ids (typeof === string)
     correct: this.correct,
     id: this._id 
   };

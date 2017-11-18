@@ -28,7 +28,7 @@ const choiceApiRepr = choice => { // improve this to use apply()
     userId: choice.userId,
     questionId: choice.questionId,
     quizId: choice.quizId,
-    choices: choice.choices,
+    choices: choice.choices, // array of answer ids (typeof === string)
     correct: choice.correct,
     id: choice._id, 
     attempt: choice.attempt,
@@ -52,7 +52,7 @@ router.post('/', jsonParser, jwtAuth, (req, res)=> {
     .then(question=>{
       const questionIds = formatQuestionOptionIds(question);     // format answers as a sorted string
       correct = questionIds === formattedChoices;   // compare, return true or false, hoist
-      console.log('SCORING: correct questionIds ===', questionIds, 'and ', 'formattedChoices ===', formattedChoices);
+      // console.log('SCORING: correct questionIds ===', questionIds, 'and ', 'formattedChoices ===', formattedChoices);
       return correct;   // compare, return true or false, hoist
     })
 
@@ -66,30 +66,30 @@ router.post('/', jsonParser, jwtAuth, (req, res)=> {
       return Choice.find({ userId: userId, quizId: quizId, attempt: attempt });
     })
     .then(choices => {
-      console.log('choices found', choices);
+      // console.log('choices found', choices);
       const formattedChoices = choices.map(choice=>choiceApiRepr(choice));
-      console.log('formatted choices found', formattedChoices);
+      // console.log('formatted choices found', formattedChoices);
       res.status(200).json(formattedChoices);
     })
     .catch(err => {
-      console.log(err);
+      // console.log(err);
       res.status(500).json({ code: 500, message: 'Internal server error' });
     });
 });
 
-// get choice by quiz id and user id
+// get choice by quiz id and user id - NOT CURRENTLY USED
 router.get('/quizzes/:quizId/users/:userId/:attempt', (req, res) => {
   return Choice.find({ quizId: req.params.quizId, userId: req.params.userId , attempt: req.params.attempt })
     .then(choices => {
-      console.log('choices found', choices);
+      // console.log('choices found', choices);
       const formattedChoices = choices.map(choice=>choiceApiRepr(choice));
-      console.log('formatted choices found', formattedChoices);
+      // console.log('formatted choices found', formattedChoices);
       return res.status(200).json(formattedChoices);
     })
     .catch(err => {
       res.status(500).json({ code: 500, message: 'Internal server error' });
-      console.log(err);
+      // console.log(err);
     });
 });
 
-module.exports = { router };
+module.exports = { router, choiceApiRepr };
