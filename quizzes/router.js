@@ -28,8 +28,8 @@ const calcCompletedAndCorrect = (choices) => {
   return { correct, completed };
 };
 
-// input: all user quizzes, user quizzes last session
-// output: updated all user quizzes
+// NOT for use with take or add; for use with user.lastSession
+// check promise handling!!!!!!!!!!!
 const scoreQuiz = (quizId, userId, attempt) => {
   Choice.find({ quizId: quizId, userId: userId , attempt: attempt })
     .then(choices=>{
@@ -46,10 +46,25 @@ const scoreQuiz = (quizId, userId, attempt) => {
 
 const ensureLastSessionIsCurrent = returnQuiz => {
   const matchingSession = returnQuiz.user.lastSession.find(quiz=>{
-    quiz.quizId === returnQuiz.quiz.id && quiz.attempt === returnQuiz.attempt;
+    quiz.id === returnQuiz.quiz.id && quiz.attempt === returnQuiz.attempt;
   });
   if (!matchingSession) {
-    returnQuiz.user.lastSession.push({quizId: returnQuiz.quiz.quizId, userId: returnQuiz.user.userId, attempt: returnQuiz.quiz.attempt});      
+    returnQuiz.user.lastSession.push({
+      quizId: returnQuiz.quiz.quizId, 
+      userId: returnQuiz.user.userId, 
+      attempt: returnQuiz.quiz.attempt
+    });      
+  }
+  return returnQuiz;
+};
+
+const ensureAttemptIsCurrent = returnQuiz => {
+  const index = returnQuiz.user.quizzes.findIndex(quiz=>{
+    quiz.id === returnQuiz.quiz.id;
+  });
+  // what if we don't find a match? should never happen, since we will have just checked that...
+  if (index) {
+    returnQuiz.user.quizzes[index].attempt = returnQuiz.quiz.attempt;    
   }
   return returnQuiz;
 };
@@ -74,9 +89,8 @@ const mapChoicesOntoQuestions =(quiz, questions, choices) => {
 };
 
 
-// TAKE OR ADD QUIZ
+// @@@@@@@@@@  T A K E     O R     A D D     Q U I Z  @@@@@@@@@@@@@@
 // get quiz id, get user's choices if any, update user if needed
-// attempt will always be 0; included for consistency with sister endpoint
 router.put('/:quizId/users/:userId/:add/:attempt/:next', jwtAuth, (req, res) => {
   const [quizId, userId, add, attempt, next] = [req.params.quizId, req.params.userId, req.params.add, req.params.attempt, req.params.next];
   const returnQuiz = {
@@ -99,7 +113,6 @@ router.put('/:quizId/users/:userId/:add/:attempt/:next', jwtAuth, (req, res) => 
       } else {
         return Question.find({quizId})
           .then(questions => {
-            // format questions
             formattedQuestions = questions.map(question=>questionApiRepr(question));
             returnQuiz.quiz.originalLength = formattedQuestions.length;  
             
@@ -110,7 +123,7 @@ router.put('/:quizId/users/:userId/:add/:attempt/:next', jwtAuth, (req, res) => 
               returnQuiz.quiz.completed = 0;
               returnQuiz.quiz.correct = 0;
             } else {
-              let score = scoreQuiz(quizId, userId, attempt);
+              let score = calcCompletedAndCorrect(choices);
               returnQuiz.quiz.completed = score.completed || 0;
               returnQuiz.quiz.correct = score.correct || 0;
               mappedQuestions = mapChoicesOntoQuestions(returnQuiz.quiz, formattedQuestions, choices);
@@ -128,10 +141,12 @@ router.put('/:quizId/users/:userId/:add/:attempt/:next', jwtAuth, (req, res) => 
     .then(user=>{
       returnQuiz.user = user.apiRepr();
       if (add === 'add') { returnQuiz.user.quizzes.push(returnQuiz.quiz); }
-      // this function mutates the object passed into it
+      // this following 2 functions mutate the object passed into it
       // this adds the current quiz & attempt if not already on the last session
       ensureLastSessionIsCurrent(returnQuiz);
-      
+      // this makes sure that that user's current attempt matches the attempt passed to the parent function
+      ensureAttemptIsCurrent(returnQuiz);
+
       return User.findByIdAndUpdate(userId,
         { $set: {quizzes: returnQuiz.user.quizzes, lastSession: returnQuiz.user.lastSession } }, // later update recent
         { new: true }
