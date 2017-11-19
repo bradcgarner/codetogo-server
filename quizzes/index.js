@@ -1,6 +1,6 @@
 'use strict';
 
 const {Quiz,Question} = require('./models');
-const {router} = require('./router');
+const {router, scoreQuizzes} = require('./router');
 
-module.exports = {Quiz, router, Question};
+module.exports = {Quiz, router, Question, scoreQuizzes};

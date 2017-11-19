@@ -43,6 +43,10 @@ const scoreQuiz = (quizId, userId, attempt) => {
     });
 };
 
+const scoreQuizzes = (allQuizzes, lastSession) => {
+  console.log('score later', allQuizzes, lastSession);
+};
+
 
 const ensureLastSessionIsCurrent = returnQuiz => {
   const matchingSession = returnQuiz.user.lastSession.find(quiz=>{
@@ -50,8 +54,8 @@ const ensureLastSessionIsCurrent = returnQuiz => {
   });
   if (!matchingSession) {
     returnQuiz.user.lastSession.push({
-      quizId: returnQuiz.quiz.quizId, 
-      userId: returnQuiz.user.userId, 
+      quizId: returnQuiz.quiz.id, 
+      userId: returnQuiz.user.id, 
       attempt: returnQuiz.quiz.attempt
     });      
   }
@@ -59,13 +63,18 @@ const ensureLastSessionIsCurrent = returnQuiz => {
 };
 
 const ensureAttemptIsCurrent = returnQuiz => {
-  const index = returnQuiz.user.quizzes.findIndex(quiz=>{
-    quiz.id === returnQuiz.quiz.id;
-  });
+  console.log('user quiz[0] id, quiz id',returnQuiz.user.quizzes[0].id, returnQuiz.quiz.id);
+  console.log('boolean',returnQuiz.user.quizzes[0].id === returnQuiz.quiz.id);
+  const index = returnQuiz.user.quizzes.findIndex(quiz=> quiz.id === returnQuiz.quiz.id);
+  console.log('attempt check index', index);
   // what if we don't find a match? should never happen, since we will have just checked that...
-  if (index) {
-    returnQuiz.user.quizzes[index].attempt = returnQuiz.quiz.attempt;    
+  if (index >= 0) {
+    returnQuiz.user.quizzes[index].attempt = returnQuiz.quiz.attempt;   
+    console.log('attempt updated #', index);
+    
   }
+  console.log('attempt returning');
+  
   return returnQuiz;
 };
 
@@ -92,7 +101,8 @@ const mapChoicesOntoQuestions =(quiz, questions, choices) => {
 // @@@@@@@@@@  T A K E     O R     A D D     Q U I Z  @@@@@@@@@@@@@@
 // get quiz id, get user's choices if any, update user if needed
 router.put('/:quizId/users/:userId/:add/:attempt/:next', jwtAuth, (req, res) => {
-  const [quizId, userId, add, attempt, next] = [req.params.quizId, req.params.userId, req.params.add, req.params.attempt, req.params.next];
+  const [quizId, userId, add, next] = [req.params.quizId, req.params.userId, req.params.add, req.params.next];
+  const attempt = parseInt(req.params.attempt);
   const returnQuiz = {
     quiz: null,
     user: null
@@ -101,10 +111,10 @@ router.put('/:quizId/users/:userId/:add/:attempt/:next', jwtAuth, (req, res) => 
 
   return Quiz.findById(quizId)// response should include id, name, total, category, difficulty
     .then(quiz=>{
-      returnQuiz.quiz = quiz;
+      returnQuiz.quiz = quiz.apiRepr();
       returnQuiz.quiz.attempt = attempt;
       returnQuiz.quiz.archive = false;
-      console.log('returnQuiz',returnQuiz);
+      // console.log('initial returnQuiz',returnQuiz);
     })
     .then(()=>{
       if (next !== 'take') {
@@ -113,23 +123,31 @@ router.put('/:quizId/users/:userId/:add/:attempt/:next', jwtAuth, (req, res) => 
       } else {
         return Question.find({quizId})
           .then(questions => {
+            // console.log('questions from db, not apiRepr', questions);
             formattedQuestions = questions.map(question=>questionApiRepr(question));
+            // console.log('formattedQuestions', formattedQuestions);
             returnQuiz.quiz.originalLength = formattedQuestions.length;  
-            
+            // console.log('originalLength', returnQuiz.quiz.originalLength);
             return Choice.find({ quizId: quizId, userId: userId , attempt: attempt });
           })
           .then(choices => {
+            // console.log('choices', choices);
             if (choices.length <= 0 || !choices) {
               returnQuiz.quiz.completed = 0;
               returnQuiz.quiz.correct = 0;
+              returnQuiz.quiz.total = formattedQuestions.length;
+              // console.log('returnQuiz.quiz.total', returnQuiz.quiz.total);
+              // console.log('returnQuiz no choice w/score:', returnQuiz);
             } else {
               let score = calcCompletedAndCorrect(choices);
               returnQuiz.quiz.completed = score.completed || 0;
               returnQuiz.quiz.correct = score.correct || 0;
+              // console.log('returnQuiz choices w/score', returnQuiz);
               mappedQuestions = mapChoicesOntoQuestions(returnQuiz.quiz, formattedQuestions, choices);
+              // console.log('mappedQuestions', mappedQuestions);
+              returnQuiz.quiz.total = mappedQuestions.newQuestions.length;
+              // console.log('returnQuiz.quiz.total', returnQuiz.quiz.total);
             }
-
-            returnQuiz.quiz.total = returnQuiz.quiz.newQuestions.length;
             
           });
       } // end else next === take
@@ -139,14 +157,26 @@ router.put('/:quizId/users/:userId/:add/:attempt/:next', jwtAuth, (req, res) => 
     })
 
     .then(user=>{
+      // console.log('user from db, not apiRepr', user);
+      
       returnQuiz.user = user.apiRepr();
-      if (add === 'add') { returnQuiz.user.quizzes.push(returnQuiz.quiz); }
+      // console.log('returnQuiz.user apiRepr', returnQuiz.user);
+      
+      if (add === 'add') { 
+        // console.log('add', add);
+        returnQuiz.user.quizzes.push(returnQuiz.quiz); 
+      }
+      // console.log('returnQuiz.user.quizzes after add', returnQuiz.user.quizzes);
+      
       // this following 2 functions mutate the object passed into it
       // this adds the current quiz & attempt if not already on the last session
       ensureLastSessionIsCurrent(returnQuiz);
+      // console.log('ensureLastSessionIsCurrent', returnQuiz);
+      
       // this makes sure that that user's current attempt matches the attempt passed to the parent function
       ensureAttemptIsCurrent(returnQuiz);
-
+      // console.log('ensureAttemptIsCurrent', returnQuiz);
+      
       return User.findByIdAndUpdate(userId,
         { $set: {quizzes: returnQuiz.user.quizzes, lastSession: returnQuiz.user.lastSession } }, // later update recent
         { new: true }
@@ -154,10 +184,26 @@ router.put('/:quizId/users/:userId/:add/:attempt/:next', jwtAuth, (req, res) => 
     })
 
     .then(user=>{
+      // console.log('user after update', user);
       returnQuiz.user = user;
-      returnQuiz.quiz.oldQuestions = mappedQuestions.oldQuestions;
-      returnQuiz.quiz.newQuestions = mappedQuestions.newQuestions;
-      console.log('returnQuiz to send', returnQuiz); 
+      // console.log('returnQuiz with updated user', returnQuiz); 
+      
+      if (next === 'take') {
+        if (returnQuiz.quiz.completed > 0) {
+          returnQuiz.quiz.oldQuestions = mappedQuestions.oldQuestions;        
+          returnQuiz.quiz.newQuestions = mappedQuestions.newQuestions;
+          // console.log('returnQuiz with old & new questions', returnQuiz); 
+        } else {
+          returnQuiz.quiz.oldQuestions = null;
+          returnQuiz.quiz.newQuestions = formattedQuestions;
+          // console.log('returnQuiz with new questions', returnQuiz); 
+        }
+      } else {
+        returnQuiz.quiz.oldQuestions = null;
+        returnQuiz.quiz.newQuestions = null;
+        // console.log('returnQuiz questions null:', returnQuiz.quiz.newQuestions, returnQuiz.quiz.oldQuestions); 
+      }
+      // console.log('returnQuiz to send', returnQuiz); 
       res.status(201).json(returnQuiz);  
     })
     .catch(err => {

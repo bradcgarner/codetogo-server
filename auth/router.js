@@ -24,7 +24,7 @@ router.post('/login', basicAuth, (req, res) => {
   const authToken = createAuthToken(req.user.apiRepr());
   let { id , username, firstName, lastName,
     quizzes, badges, recent, lastSession  } = req.user.apiRepr();
-  if (lastSession.length > 0) {
+  if (lastSession.length > 0 && lastSession.length === 999) { // temp to escape !!!!!!
     quizzes = scoreQuizzes(quizzes, lastSession);
     lastSession = [];
     return User.findByIdAndUpdate(id,
