@@ -18,13 +18,13 @@ const jwtAuth = passport.authenticate('jwt', { session: false });
 
 
 const calcCompletedAndCorrect = (choices) => {
-  console.log('all Quiz Choices ', choices); 
+  // console.log('all Quiz Choices ', choices); 
   const completed = choices.length;
-  console.log('completed',completed); 
+  // console.log('completed',completed); 
   const choicesCorrect = choices.filter(choice => choice.correct === true );
-  console.log('choicesCorrect', choicesCorrect); 
+  // console.log('choicesCorrect', choicesCorrect); 
   const correct = choicesCorrect.length;
-  console.log('correct',correct); 
+  // console.log('correct',correct); 
   return { correct, completed };
 };
 
@@ -33,11 +33,11 @@ const calcCompletedAndCorrect = (choices) => {
 const scoreQuiz = (quizId, userId, attempt) => {
   Choice.find({ quizId: quizId, userId: userId , attempt: attempt })
     .then(choices=>{
-      console.log('choices[0]', choices[0]);
+      // console.log('choices[0]', choices[0]);
       if(choices.length>0) {
         return calcCompletedAndCorrect(choices);
       } else {
-        console.log('no choices');
+        // console.log('no choices');
         return;
       }
     });
@@ -63,18 +63,16 @@ const ensureLastSessionIsCurrent = returnQuiz => {
 };
 
 const ensureAttemptIsCurrent = returnQuiz => {
-  console.log('user quiz[0] id, quiz id',returnQuiz.user.quizzes[0].id, returnQuiz.quiz.id);
-  console.log('boolean',returnQuiz.user.quizzes[0].id === returnQuiz.quiz.id);
+  // console.log('user quiz[0] id, quiz id',returnQuiz.user.quizzes[0].id, returnQuiz.quiz.id);
+  // console.log('boolean',returnQuiz.user.quizzes[0].id === returnQuiz.quiz.id);
   const index = returnQuiz.user.quizzes.findIndex(quiz=> quiz.id === returnQuiz.quiz.id);
-  console.log('attempt check index', index);
+  // console.log('attempt check index', index);
   // what if we don't find a match? should never happen, since we will have just checked that...
   if (index >= 0) {
     returnQuiz.user.quizzes[index].attempt = returnQuiz.quiz.attempt;   
-    console.log('attempt updated #', index);
-    
+    // console.log('attempt updated #', index);
   }
-  console.log('attempt returning');
-  
+  // console.log('attempt returning');
   return returnQuiz;
 };
 
