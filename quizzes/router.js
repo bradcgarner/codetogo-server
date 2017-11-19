@@ -59,8 +59,9 @@ const mapChoicesOntoQuestions =(quiz, questions, choices) => {
   let oldQuestions = [];
   let newQuestions = [];
   // update quiz question list to include prior choices (as array of strings)
-  questions.forEach(question=>{
+  questions.forEach((question, index)=>{
     const choiceFound = formattedChoices.find(choice=>choice.questionId === question.questionId);
+    question.stickyIndex = index;
     if (choiceFound) { 
       question.choices = choiceFound.choices; 
       question.correct = choiceFound.correct; 
@@ -108,7 +109,6 @@ router.put('/:quizId/users/:userId/:add/:attempt/:next', jwtAuth, (req, res) => 
             if (choices.length <= 0 || !choices) {
               returnQuiz.quiz.completed = 0;
               returnQuiz.quiz.correct = 0;
-
             } else {
               let score = scoreQuiz(quizId, userId, attempt);
               returnQuiz.quiz.completed = score.completed || 0;
@@ -138,7 +138,8 @@ router.put('/:quizId/users/:userId/:add/:attempt/:next', jwtAuth, (req, res) => 
       );        
     })
 
-    .then(()=>{
+    .then(user=>{
+      returnQuiz.user = user;
       returnQuiz.quiz.oldQuestions = mappedQuestions.oldQuestions;
       returnQuiz.quiz.newQuestions = mappedQuestions.newQuestions;
       console.log('returnQuiz to send', returnQuiz); 
