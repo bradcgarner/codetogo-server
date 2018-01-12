@@ -30,21 +30,61 @@ const calcCompletedAndCorrect = (choices) => {
 
 // NOT for use with take or add; for use with user.lastSession
 // check promise handling!!!!!!!!!!!
-const scoreQuiz = (quizId, userId, attempt) => {
-  Choice.find({ quizId: quizId, userId: userId , attempt: attempt })
+const scoreQuiz = (quiz, quizId, userId, attempt) => {
+  // console.log('score:',quiz, quizId, userId, attempt);
+  return Choice.find({ quizId: quizId, userId: userId , attempt: attempt })
     .then(choices=>{
-      // console.log('choices[0]', choices[0]);
+      console.log('choices', choices);
       if(choices.length>0) {
-        return calcCompletedAndCorrect(choices);
+        let score = calcCompletedAndCorrect(choices);
+        console.log('score',score);
+        quiz.completed = score.completed;
+        quiz.correct = score.correct;
+        return;
       } else {
-        // console.log('no choices');
+        console.log('no choices');
         return;
       }
     });
 };
 
 const scoreQuizzes = (allQuizzes, lastSession) => {
-  console.log('score later', allQuizzes, lastSession);
+  console.log('inside scoreQuizzes:');
+  console.log('lastSession', lastSession);
+  console.log('--');
+  console.log('allQuizzes', allQuizzes);
+  const arrayOfPromises = [];
+  let promiseCount = 0;
+  lastSession.forEach(priorQuiz=>{
+    console.log('priorQuiz.quizId:', priorQuiz.quizId);
+    console.log('allQuizzes', allQuizzes.length, allQuizzes[0]);
+    for (let i = 0; i<allQuizzes.length; i++ ) {
+      console.log(i, 'comparison', String(allQuizzes[i].id),String(priorQuiz.quizId), String(allQuizzes[i].id) === String(priorQuiz.quizId));
+      if (String(allQuizzes[i].id) === String(priorQuiz.quizId)) {
+        console.log('found',i);
+        promiseCount++;
+        const scorePromise = scoreQuiz(
+          allQuizzes[i],
+          priorQuiz.quizId, 
+          priorQuiz.userId, 
+          priorQuiz.attempt
+        );
+        arrayOfPromises.push(scorePromise);
+        i = allQuizzes.length + 1;        
+      }
+    }
+  });
+  console.log('arrayOfPromises, allQuizzes, lastSession', arrayOfPromises, allQuizzes, lastSession);
+  console.log('-space-');  
+  if (promiseCount > 0) {
+    console.log('promiseCount',promiseCount);
+    return Promise.all(arrayOfPromises);    
+  } else {
+    console.log('no promises');
+    return new Promise ((resolve, reject)=> {
+      resolve(true);
+    });
+  }
 };
 
 
@@ -83,7 +123,6 @@ const mapChoicesOntoQuestions =(quiz, questions, choices) => {
   // update quiz question list to include prior choices (as array of strings)
   questions.forEach((question, index)=>{
     const choiceFound = formattedChoices.find(choice=>choice.questionId === question.questionId);
-    question.stickyIndex = index;
     if (choiceFound) { 
       question.choices = choiceFound.choices; 
       question.correct = choiceFound.correct; 
@@ -93,6 +132,21 @@ const mapChoicesOntoQuestions =(quiz, questions, choices) => {
     }
   });
   return {oldQuestions, newQuestions};
+};
+
+const questionApiRepr = function (question, index) {
+  // console.log('single question', question);
+  return { 
+    answers: question.answers.map(answer=> {
+      return {
+        option: answer.option,
+        id: answer._id,
+      };
+    }), 
+    question: question.question,
+    inputType: question.inputType,
+    stickyIndex: index,    
+    id: question._id };
 };
 
 
@@ -112,7 +166,7 @@ router.put('/:quizId/users/:userId/:add/:attempt/:next', jwtAuth, (req, res) => 
       returnQuiz.quiz = quiz.apiRepr();
       returnQuiz.quiz.attempt = attempt;
       returnQuiz.quiz.archive = false;
-      // console.log('initial returnQuiz',returnQuiz);
+      console.log('initial returnQuiz',returnQuiz);
     })
     .then(()=>{
       if (next !== 'take') {
@@ -121,30 +175,31 @@ router.put('/:quizId/users/:userId/:add/:attempt/:next', jwtAuth, (req, res) => 
       } else {
         return Question.find({quizId})
           .then(questions => {
-            // console.log('questions from db, not apiRepr', questions);
-            formattedQuestions = questions.map(question=>questionApiRepr(question));
-            // console.log('formattedQuestions', formattedQuestions);
+            console.log('questions from db, not apiRepr', questions);
+            formattedQuestions = questions.map((question,index)=>questionApiRepr(question, index));
+            console.log('formattedQuestions', formattedQuestions);
             returnQuiz.quiz.originalLength = formattedQuestions.length;  
-            // console.log('originalLength', returnQuiz.quiz.originalLength);
+            console.log('originalLength', returnQuiz.quiz.originalLength);
+            
             return Choice.find({ quizId: quizId, userId: userId , attempt: attempt });
           })
           .then(choices => {
-            // console.log('choices', choices);
+            console.log('FOUND PRIOR CHOICES ~~~~~~~~', choices);
             if (choices.length <= 0 || !choices) {
               returnQuiz.quiz.completed = 0;
               returnQuiz.quiz.correct = 0;
               returnQuiz.quiz.total = formattedQuestions.length;
-              // console.log('returnQuiz.quiz.total', returnQuiz.quiz.total);
-              // console.log('returnQuiz no choice w/score:', returnQuiz);
+              console.log('returnQuiz.quiz.total', returnQuiz.quiz.total);
+              console.log('returnQuiz no choice w/score:', returnQuiz);
             } else {
               let score = calcCompletedAndCorrect(choices);
               returnQuiz.quiz.completed = score.completed || 0;
               returnQuiz.quiz.correct = score.correct || 0;
-              // console.log('returnQuiz choices w/score', returnQuiz);
+              console.log('returnQuiz choices w/score', returnQuiz);
               mappedQuestions = mapChoicesOntoQuestions(returnQuiz.quiz, formattedQuestions, choices);
-              // console.log('mappedQuestions', mappedQuestions);
+              console.log('mappedQuestions', mappedQuestions);
               returnQuiz.quiz.total = mappedQuestions.newQuestions.length;
-              // console.log('returnQuiz.quiz.total', returnQuiz.quiz.total);
+              console.log('returnQuiz.quiz.total', returnQuiz.quiz.total);
             }
             
           });
@@ -155,25 +210,25 @@ router.put('/:quizId/users/:userId/:add/:attempt/:next', jwtAuth, (req, res) => 
     })
 
     .then(user=>{
-      // console.log('user from db, not apiRepr', user);
+      console.log('user from db, not apiRepr', user);
       
       returnQuiz.user = user.apiRepr();
-      // console.log('returnQuiz.user apiRepr', returnQuiz.user);
+      console.log('returnQuiz.user apiRepr', returnQuiz.user);
       
       if (add === 'add') { 
-        // console.log('add', add);
+        console.log('add', add);
         returnQuiz.user.quizzes.push(returnQuiz.quiz); 
       }
-      // console.log('returnQuiz.user.quizzes after add', returnQuiz.user.quizzes);
+      console.log('returnQuiz.user.quizzes after add', returnQuiz.user.quizzes);
       
       // this following 2 functions mutate the object passed into it
       // this adds the current quiz & attempt if not already on the last session
       ensureLastSessionIsCurrent(returnQuiz);
-      // console.log('ensureLastSessionIsCurrent', returnQuiz);
+      console.log('ensureLastSessionIsCurrent', returnQuiz);
       
       // this makes sure that that user's current attempt matches the attempt passed to the parent function
       ensureAttemptIsCurrent(returnQuiz);
-      // console.log('ensureAttemptIsCurrent', returnQuiz);
+      console.log('ensureAttemptIsCurrent', returnQuiz);
       
       return User.findByIdAndUpdate(userId,
         { $set: {quizzes: returnQuiz.user.quizzes, lastSession: returnQuiz.user.lastSession } }, // later update recent
@@ -182,26 +237,26 @@ router.put('/:quizId/users/:userId/:add/:attempt/:next', jwtAuth, (req, res) => 
     })
 
     .then(user=>{
-      // console.log('user after update', user);
+      console.log('user after update', user);
       returnQuiz.user = user;
-      // console.log('returnQuiz with updated user', returnQuiz); 
+      console.log('returnQuiz with updated user', returnQuiz); 
       
       if (next === 'take') {
         if (returnQuiz.quiz.completed > 0) {
           returnQuiz.quiz.oldQuestions = mappedQuestions.oldQuestions;        
           returnQuiz.quiz.newQuestions = mappedQuestions.newQuestions;
-          // console.log('returnQuiz with old & new questions', returnQuiz); 
+          console.log('returnQuiz with old & new questions', returnQuiz); 
         } else {
           returnQuiz.quiz.oldQuestions = null;
           returnQuiz.quiz.newQuestions = formattedQuestions;
-          // console.log('returnQuiz with new questions', returnQuiz); 
+          console.log('returnQuiz with new questions', returnQuiz); 
         }
       } else {
         returnQuiz.quiz.oldQuestions = null;
         returnQuiz.quiz.newQuestions = null;
-        // console.log('returnQuiz questions null:', returnQuiz.quiz.newQuestions, returnQuiz.quiz.oldQuestions); 
+        console.log('returnQuiz questions null:', returnQuiz.quiz.newQuestions, returnQuiz.quiz.oldQuestions); 
       }
-      // console.log('returnQuiz to send', returnQuiz); 
+      console.log('returnQuiz to send', returnQuiz); 
       res.status(201).json(returnQuiz);  
     })
     .catch(err => {
@@ -251,26 +306,12 @@ router.get('/:quizId', (req, res) => {
     });
 });
 
-const questionApiRepr = function (question) {
-  // console.log('single question', question);
-  return { 
-    answers: question.answers.map(answer=> {
-      return {
-        option: answer.option,
-        id: answer._id
-      };
-    }), 
-    question: question.question,
-    inputType: question.inputType,
-    id: question._id };
-};
-
 // get all questions by quiz id
 router.get('/:quizId/questions/', (req, res) => {
   return Question.find({quizId: req.params.quizId})
     .then(questions => {
       // console.log('unformatted', questions);
-      const formattedQuestions = questions.map(question=>questionApiRepr(question));
+      const formattedQuestions = questions.map((question,index)=>questionApiRepr(question, index));
       // console.log('formattedQuestions',formattedQuestions);      
       return res.status(200).json(formattedQuestions);
     })

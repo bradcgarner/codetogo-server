@@ -166,74 +166,56 @@ router.post('/', jsonParser, (req, res) => {
 
   return confirmUniqueUsername(username)
     .then(() => {
-      // console.log('hash');
       return User.hashPassword(password);
     })
     .then(hash => {
-      // console.log('create');
       return User.create({ username, password: hash, lastName, firstName });
     })
     .then(user => {
-      // console.log('respond');
       return res.status(201).json(user.apiRepr());
     })
     .catch(err => {
-      // console.log('catch');
       if (err.reason === 'ValidationError') {
-        // console.log('validation error');
         return res.status(422).json(err);
       }
-      // console.log('500');
       res.status(500).json({ code: 500, message: 'Internal server error' });
     });
 });
 
 // update a user profile
 router.put('/:id', jsonParser, jwtAuth, (req, res) => {
-  // console.log('put req.body', req.body);
   const user = validateUserFields(req.body, 'existingUser');
-  // console.log('user AFTER VALIDATION', user);
   let userValid;
   if (user !== 'ok') {
-    // console.log('not valid',user);
     user.reason = 'ValidationError';
     return res.status(422).json(user);
   } else {
-    // console.log('valid');
     userValid = req.body;
   }
 
+  // REFACTOR:
+  // return last that is true (or first that is false)
+  // return userValid.password && User.hashPassword(userValid.password)
 
   return confirmUniqueUsername(userValid.username, 'existingUser') // returns Promise.resolve or .reject
     .then(() => {
-      // console.log('confirm unique passed');      
       if (userValid.password) {
-        // console.log('there is password');      
-        
         return User.hashPassword(userValid.password);
-      } else {
-        // console.log('no password');      
-        
-        return false;
-      }
+      } 
+      return false;
     })
     .then(hash => {
-      // console.log('hash');      
-      
       if (hash) {
         userValid.password = hash;
       }
     })
     .then(() => {
-      // console.log('find by id and update');      
-      
       return User.findByIdAndUpdate(req.params.id,
         { $set: userValid },
         { new: true },
         function (err, user) {
           if (err) return res.send(err);
           const filteredUser = user.apiRepr();
-          // console.log('filteredUser', filteredUser);
           res.status(201).json(filteredUser);
         }
       );
@@ -249,19 +231,13 @@ router.put('/:id', jsonParser, jwtAuth, (req, res) => {
 // update a user data (any data other than credentials)
 router.put('/:id/data', jwtAuth, jsonParser, (req, res) => {  
   const updateUser = req.body;
-  // console.log('req.params.id', req.params.id);
-  // console.log('req.body at :id/data', req.body);
-  // console.log('updateUser', updateUser);
 
   User.findByIdAndUpdate(req.params.id,
     { $set: {quizzes: updateUser.quizzes, recent: updateUser.recent } }, // recent: updateUser.recent
     { new: true },
     function (err, user) {
-      // console.log('err after err, user',err);
       if (err) return res.status(500).json({message: 'user not found', error: err});
-      // console.log('found');
       const filteredUser = user.apiRepr();    
-      // console.log('filteredUser', filteredUser);
       res.status(201).json(filteredUser);
     });
 });
