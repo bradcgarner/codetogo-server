@@ -5,8 +5,8 @@
 const express = require('express');
 const router = express.Router();
 
-const { User, Choice } = require('./models');
-const { Question } = require('../quizzes');
+const { Choice } = require('./models');
+const { Question } = require('../quizzes/models');
 
 const bodyParser = require('body-parser');
 const jsonParser = bodyParser.json();
@@ -28,14 +28,15 @@ const choiceApiRepr = choice => { // improve this to use apply()
     userId: choice.userId,
     questionId: choice.questionId,
     quizId: choice.quizId,
-    choices: choice.choices,
+    choices: choice.choices, // array of answer ids (typeof === string)
     correct: choice.correct,
     id: choice._id, 
     attempt: choice.attempt,
   };
 };
 
-// post choice (answer a question)
+// @@@@@@@@@@  S U B M I T     C H O I C E S    @@@@@@@@@@@@@@
+
 router.post('/', jsonParser, jwtAuth, (req, res)=> {
 
   let userId = req.body.userId; // string
@@ -46,13 +47,17 @@ router.post('/', jsonParser, jwtAuth, (req, res)=> {
   
   let formattedChoices = (choices).sort((a,b) => a-b).join(','); 
   let correct;
+  console.log('userId',userId, 'questionId',questionId, 'attempt',attempt, 'quizId',quizId, 'choices',choices, 'formattedChoices',formattedChoices)
 
   // FIND QUESTION AND SCORE CHOICE
   Question.findById( questionId )
     .then(question=>{
+      console.log('question from db', question);
       const questionIds = formatQuestionOptionIds(question);     // format answers as a sorted string
+      console.log('joined ids', questionIds);      
       correct = questionIds === formattedChoices;   // compare, return true or false, hoist
-      console.log('SCORING: correct questionIds ===', questionIds, 'and ', 'formattedChoices ===', formattedChoices);
+      // console.log('SCORING: correct questionIds ===', questionIds, 'and ', 'formattedChoices ===', formattedChoices);
+      console.log('correct', correct);      
       return correct;   // compare, return true or false, hoist
     })
 
@@ -61,35 +66,32 @@ router.post('/', jsonParser, jwtAuth, (req, res)=> {
       return Choice.create({userId, questionId, attempt, quizId, choices, correct });
     })
 
-    // FIND ALL CHOICES THIS USER, THIS QUIZ, THIS ATTEMPT
-    .then(()=>{
-      return Choice.find({ userId: userId, quizId: quizId, attempt: attempt });
-    })
-    .then(choices => {
-      console.log('choices found', choices);
-      const formattedChoices = choices.map(choice=>choiceApiRepr(choice));
-      console.log('formatted choices found', formattedChoices);
-      res.status(200).json(formattedChoices);
+    .then(choice => {
+      console.log('choice successfully inserted', choice);
+      const formattedChoice = choiceApiRepr(choice);
+      console.log('choice to return', formattedChoice);
+      res.status(201).json(formattedChoice);
     })
     .catch(err => {
-      console.log(err);
+      // console.log(err);
       res.status(500).json({ code: 500, message: 'Internal server error' });
     });
 });
 
-// get choice by quiz id and user id
+// XXXXXXXXXXXXX C H O I C E     B Y     Q U I Z    &    U S E R     I D S  XXXXXXXXXXXXXXX
+// NOT CURRENTLY USED !!!!!!
 router.get('/quizzes/:quizId/users/:userId/:attempt', (req, res) => {
   return Choice.find({ quizId: req.params.quizId, userId: req.params.userId , attempt: req.params.attempt })
     .then(choices => {
-      console.log('choices found', choices);
+      // console.log('choices found', choices);
       const formattedChoices = choices.map(choice=>choiceApiRepr(choice));
-      console.log('formatted choices found', formattedChoices);
+      // console.log('formatted choices found', formattedChoices);
       return res.status(200).json(formattedChoices);
     })
     .catch(err => {
       res.status(500).json({ code: 500, message: 'Internal server error' });
-      console.log(err);
+      // console.log(err);
     });
 });
 
-module.exports = { router };
+module.exports = { router, choiceApiRepr };

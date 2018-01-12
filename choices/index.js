@@ -1,6 +1,6 @@
 'use strict';
 
 const {Choice} = require('./models');
-const {router} = require('./router');
+const {router, choiceApiRepr} = require('./router');
 
-module.exports = {Choice, router};
+module.exports = {Choice, router, choiceApiRepr};
