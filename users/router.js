@@ -14,6 +14,8 @@ const passport = require('passport');
 const jwt = require('jsonwebtoken');
 const jwtAuth = passport.authenticate('jwt', { session: false });
 
+// @@@@@@@@@@@ HELPERS @@@@@@@@@@@@@
+
 const validateUserFieldsPresent = user => {
   const requiredFields = ['username', 'password', 'firstName', 'lastName'];
   const missingField = requiredFields.find(field => (!(field in user)));
@@ -138,7 +140,7 @@ router.post('/', jsonParser, (req, res) => {
   }
 
   console.log('user validated');
-  let { username, password, lastName, firstName } = userValid;
+  let { username, password, lastName, firstName, email } = userValid;
 
   return confirmUniqueUsername(username)
     .then(() => {
@@ -147,7 +149,7 @@ router.post('/', jsonParser, (req, res) => {
     })
     .then(hash => {
       console.log('create');
-      return User.create({ username, password: hash, lastName, firstName });
+      return User.create({ username, password: hash, lastName, firstName, email });
     })
     .then(user => {
       console.log('respond');
@@ -178,7 +180,6 @@ router.put('/:id', jsonParser, jwtAuth, (req, res) => {
     console.log('valid');
     userValid = req.body;
   }
-
 
   return confirmUniqueUsername(userValid.username) // returns Promise.resolve or .reject
     .then(() => {

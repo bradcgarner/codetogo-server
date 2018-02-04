@@ -6,24 +6,28 @@ const mongoose = require('mongoose');
 mongoose.Promise = global.Promise;
 
 const UserSchema = mongoose.Schema({
-  firstName: { type: String, required: true },
-  lastName: { type: String, required: true },
   username: { type: String, required: true, unique: true },
   password: { type: String, required: true },
-  quizzes: Array,
+  firstName: { type: String, required: true },
+  lastName: { type: String, required: true },
+  email: { type: String, required: true },
+  avatar: { type: String },
+  quizzes: { type: Array },
   badges: { type: String },
   recent: [{type: String}]
 });
 
 UserSchema.methods.apiRepr = function () {
   return { 
+    id: this._id,
+    username: this.username,
     firstName: this.firstName,
     lastName: this.lastName,
-    username: this.username,
+    email: this.email,
+    avatar: this.avatar,
     quizzes: this.quizzes, 
     badges: this.badges, 
     recent: this.recent,
-    id: this._id 
   };
 };
 

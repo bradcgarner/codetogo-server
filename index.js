@@ -9,11 +9,10 @@ mongoose.Promise = global.Promise;
 
 const { router: userRouter } = require('./users');
 const { router: quizRouter } = require('./quizzes');
-const { router: choiceRouter } = require('./choices');
-
-const { router: authRouter, basicStrategy, jwtStrategy } = require('./auth');
+const { router: adminRouter } = require('./admin');
+const { router: authRouter, localStrategy, jwtStrategy } = require('./auth');
 const passport = require('passport');
-passport.use(basicStrategy);
+passport.use(localStrategy);
 passport.use(jwtStrategy);
 
 const cors = require('cors');
@@ -33,10 +32,10 @@ app.use(express.static('public'));
 //   res.sendFile(__dirname + '/views/index.html');
 // });
 
-app.use('/api/users', userRouter);
-app.use('/api/choices', choiceRouter);
-app.use('/api/quizzes', quizRouter);
+app.use('/api/admin/', adminRouter);
 app.use('/api/auth/', authRouter);
+app.use('/api/users', userRouter);
+app.use('/api/quizzes', quizRouter);
 
 app.use('*', (req, res) => {
   return res.status(404).json({ message: 'Not Found' });

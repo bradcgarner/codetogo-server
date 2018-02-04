@@ -16,27 +16,38 @@ mongoose.Promise = global.Promise;
 // values, such as indexCurrent and score become unique to the user
 
 const QuizSchema = mongoose.Schema({
+  idUser: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // we'll set library to 0
   name: { type: String, required: true },
-  description: { type: String },
   category: { type: String }, // HTML, CSS, JS
   difficulty: { type: Number }, // scale of 1 easy 5 advanced
+  description: { type: String },
   total: { type: Number }, // total number of questions, populated via script
   score: { type: Number },
-  idUser: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // we'll set library to 0
   indexCurrent: { type: Number } // default to 0
 });
 
 QuizSchema.methods.apiRepr = function () {
   return { 
+    id: this._id,
+    idUser: this.idUser,
     name: this.name,
-    description: this.description,
     category: this.category,
     difficulty: this.difficulty,
+    description: this.description,
     total: this.total,
     score: this.score,
-    idUser: this.idUser,
-    indexCurrent: this.indexCurrent,
-    id: this._id };
+    indexCurrent: this.indexCurrent };
+};
+
+QuizSchema.methods.initializeRepr = function () {
+  return { 
+    id: this._id,
+    name: this.name,
+    category: this.category,
+    difficulty: this.difficulty,
+    description: this.description,
+    total: this.total,
+  };
 };
 
 const Quiz = mongoose.models.Quiz || mongoose.model('Quiz', QuizSchema);

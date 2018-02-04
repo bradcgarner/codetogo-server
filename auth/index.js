@@ -2,6 +2,7 @@
 
 const {router} = require('./router');
 
-const {basicStrategy, jwtStrategy} = require('./strategies');
+const { jwtStrategy } = require('./jwt-strategy');
+const { localStrategy } = require('./local-strategy');
 
-module.exports = {router, basicStrategy, jwtStrategy};
+module.exports = {router, localStrategy, jwtStrategy};
