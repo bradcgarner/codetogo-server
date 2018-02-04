@@ -5,7 +5,7 @@
 const express = require('express');
 const router = express.Router();
 
-const { User, } = require('./models');
+const { User } = require('./models');
 
 const bodyParser = require('body-parser');
 const jsonParser = bodyParser.json();
@@ -16,25 +16,15 @@ const jwtAuth = passport.authenticate('jwt', { session: false });
 
 const validateUserFieldsPresent = user => {
   const requiredFields = ['username', 'password', 'firstName', 'lastName'];
-  // let missingField;
-  // requiredFields.forEach(field => {
-  //   if ()
-  // });
-  //   !(field in user));
   const missingField = requiredFields.find(field => (!(field in user)));
-  console.log('new user missing field', missingField);
   if (missingField) {
-    console.log('missingfield', missingField);
     const response = {
       message: 'Missing field',
       location: missingField
     };
-    console.log('response', response);
     return response;
   }
-  console.log('true (no missing field)');
   return 'ok';
-
 };
 
 const validateUserFieldsString = user => {
@@ -52,24 +42,18 @@ const validateUserFieldsString = user => {
 };  
 
 const validateUserFieldsTrimmed = user => {
-  console.log('checking trim');
   const explicityTrimmedFields = ['username', 'password'];
-  console.log('explicityTrimmedFields', explicityTrimmedFields);
   const nonTrimmedField = explicityTrimmedFields.find(
     field => user[field].trim() !== user[field]
   );
-  console.log('nonTrimmedField', nonTrimmedField);
-  console.log('non-trimmed', nonTrimmedField);
   if (nonTrimmedField) {
-    console.log('returning');
     return {
       message: 'Cannot start or end with whitespace',
       location: nonTrimmedField
     };
   }
-  console.log('ok trim');
   return 'ok' ;
-};  
+};   
 
 const validateUserFieldsSize = user => {  
   const sizedFields = {
@@ -97,35 +81,24 @@ const validateUserFieldsSize = user => {
 };  
 
 const validateUserFields = (user, type) => { // type = new or existing
-  console.log('Present, String, Trimmed, Size1');  
-  const isPresentt = validateUserFieldsPresent(user);
+  const isPresentt = type === 'new' ? validateUserFieldsPresent(user): 'ok';
   const isStringg = validateUserFieldsString(user);
   const isTrimmedd = validateUserFieldsTrimmed(user);
   const isSize = validateUserFieldsSize(user);
-  console.log('Present, String, Trimmed, Size2');  
-  console.log(isPresentt);
-  console.log(isStringg);
-  console.log(isTrimmedd);
-  console.log(isSize);
   
   if (isPresentt !== 'ok' && type === 'new') {
-    console.log('present');
     return isPresentt; 
 
   } else if (isStringg !== 'ok') {
-    console.log('string');
     return isStringg;
 
   } else if (isTrimmedd !== 'ok' ) {
-    console.log('trimmed');
     return isTrimmedd;
 
   } else if (isSize !== 'ok' ) {
-    console.log('size');
     return isSize;
 
   } else {
-    console.log('final ok');
     return 'ok';
   }
 };

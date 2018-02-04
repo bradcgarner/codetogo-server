@@ -19,11 +19,6 @@ passport.use(jwtStrategy);
 const cors = require('cors');
 const morgan = require('morgan');
 
-// app.use(
-//   morgan(process.env.NODE_ENV === 'production' ? 'common' : 'dev', {
-//     skip: (req, res) => process.env.NODE_ENV === 'test'
-//   })
-// );
 app.use(morgan('combined'));
 
 app.use(
@@ -32,13 +27,11 @@ app.use(
   })
 );
 
-app.use((req,res,next)=>{
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'POST, PUT');
-  res.header('Access-Control-Request-Headers');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
-  next();
-});
+// option below is to serve up html from the server, vs client
+app.use(express.static('public'));
+// app.get('/', (req, res) => {
+//   res.sendFile(__dirname + '/views/index.html');
+// });
 
 app.use('/api/users', userRouter);
 app.use('/api/choices', choiceRouter);

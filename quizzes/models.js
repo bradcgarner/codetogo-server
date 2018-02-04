@@ -4,36 +4,26 @@ const mongoose = require('mongoose');
 
 mongoose.Promise = global.Promise;
 
-const QuestionSchema = mongoose.Schema({
-  question: { type: String },
-  inputType: { type: String }, // radio, checkbox, text
-  answers: [{
-    option: { type: String },
-    correct: { type: Boolean },
-    id: { type: Number }, // Mongo is currently creating ObjectId here...
-  }],
-  quizId: { type: mongoose.Schema.Types.ObjectId, ref: 'Quiz' } // each question belongs to 1 only quiz
-});
+// Quizzes are populated by script that:
+// creates a quiz and gets its id
+// creates questions and adds the quiz id to the questions
+// counts the questions added successfully
+// populates the total count of questions in the quiz
+// default values are set via script
 
-QuestionSchema.methods.apiRepr = function () {
-  return { 
-    question: this.question,
-    inputType: this.inputType,
-    answers: this.answers.map(option=>delete option.correct), 
-    id: this._id };
-};
-
-const Question = mongoose.models.Question || mongoose.model('Question', QuestionSchema);
+// Quizzes are copied to the user when the user adds or takes a quiz
+// user never refers back to library except to add a quiz
+// values, such as indexCurrent and score become unique to the user
 
 const QuizSchema = mongoose.Schema({
-  name: {
-    type: String,
-    required: true
-  },
+  name: { type: String, required: true },
   description: { type: String },
   category: { type: String }, // HTML, CSS, JS
   difficulty: { type: Number }, // scale of 1 easy 5 advanced
-  total: { type: Number }, // total number of questions, populated via maint. script
+  total: { type: Number }, // total number of questions, populated via script
+  score: { type: Number },
+  idUser: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // we'll set library to 0
+  indexCurrent: { type: Number } // default to 0
 });
 
 QuizSchema.methods.apiRepr = function () {
@@ -43,9 +33,12 @@ QuizSchema.methods.apiRepr = function () {
     category: this.category,
     difficulty: this.difficulty,
     total: this.total,
+    score: this.score,
+    idUser: this.idUser,
+    indexCurrent: this.indexCurrent,
     id: this._id };
 };
 
 const Quiz = mongoose.models.Quiz || mongoose.model('Quiz', QuizSchema);
 
-module.exports = { Quiz, Question };
+module.exports = { Quiz };
