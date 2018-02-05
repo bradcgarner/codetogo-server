@@ -17,13 +17,14 @@ mongoose.Promise = global.Promise;
 
 const QuizSchema = mongoose.Schema({
   idUser: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // we'll set library to 0
-  name: { type: String, required: true, unique: true },
+  name: { type: String, required: true, unique: true},
   category: { type: String }, // HTML, CSS, JS
   difficulty: { type: Number }, // scale of 1 easy 5 advanced
   description: { type: String },
   total: { type: Number }, // total number of questions, populated via script
   score: { type: Number },
-  indexCurrent: { type: Number } // default to 0
+  indexCurrent: { type: Number }, // default to 0
+  library: { type: Boolean },
 });
 
 QuizSchema.methods.apiRepr = function () {

@@ -9,6 +9,7 @@ mongoose.Promise = global.Promise;
 
 const { router: userRouter } = require('./users');
 const { router: quizRouter } = require('./quizzes');
+const { router: questionRouter } = require('./questions');
 const { router: adminRouter } = require('./admin');
 const { router: authRouter, localStrategy, jwtStrategy } = require('./auth');
 const passport = require('passport');
@@ -36,6 +37,7 @@ app.use('/api/admin/', adminRouter);
 app.use('/api/auth/', authRouter);
 app.use('/api/users', userRouter);
 app.use('/api/quizzes', quizRouter);
+app.use('/api/questions', questionRouter);
 
 app.use('*', (req, res) => {
   return res.status(404).json({ message: 'Not Found' });

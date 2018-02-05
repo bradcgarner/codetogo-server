@@ -1,5 +1,5 @@
 'use strict';
-// endpoint is /api/quizzes/
+// endpoint is /api/questions/
 // index: helpers, put, post, delete (no post)
 
 const express = require('express');
@@ -42,49 +42,58 @@ const formatQuestionOptionIds = question => {
 // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 // create put endpoint(s) to update quiz, including add comments (after MVP)
-router.put('/:idQuestion', jsonParser, jwtAuth, (req, res) => {
+router.put('/:idQuestion', jwtAuth, (req, res) => {
   
-  const { idQuiz, idUser, idQuestion, id, index, score, choices, idTrue, idFalse, idNext } = req.body;
+  const idQuestion = req.params.idQuestion;
+  const { idUser, nameQuiz, idQuiz, index, score, choices, indexNext, indexTrue, indexFalse } = req.body;
   let correct = false;
   let scoreNew = score;
-  let questionNext, idToUpdate, indexNext, answers;
+  let questionNext, indexToUpdate, answers;
   let formattedChoices = (choices).sort((a,b) => a-b).join(','); 
+  
+  console.log('idQuestion',idQuestion);
 
   // get the question by id from db, 
-  Question.findById(id)
+  return Question.findById(idQuestion)
     .then(currentQuestion=>{
+      console.log('currentQuestion',currentQuestion);
       
       // score the choice, set new score
       const questionIds = formatQuestionOptionIds(currentQuestion);     // format answers as a sorted string
+      console.log('questionIds',questionIds);
       correct = questionIds === formattedChoices;   // compare, return true or false, hoist
       scoreNew = setScore(score, correct);
+      console.log('scoreNew',scoreNew);
       answers = currentQuestion.answers;
-      idToUpdate = correct ? idTrue : idFalse;
+      indexToUpdate = correct ? indexTrue : indexFalse;
       console.log('SCORING: correct questionIds ===', questionIds, 'and ', 'formattedChoices ===', formattedChoices);
       return correct;   // compare, return true or false, hoist
     })
 
     // get questionNext
     .then(()=>{
-      return Question.findById(idNext);
+      return Question.findOne({
+        nameQuiz,
+        index: indexNext,
+        accepted: true,
+      });
     })
     .then(foundQuestion=>{
-      questionNext = foundQuestion[0];
+      console.log('foundQuestion',foundQuestion);
+      questionNext = foundQuestion.apiRepr();
       
       // respond to client here ????
 
-      // start update pointers, find by either idTrue or idFalse
-      return Question.findById(idToUpdate);
-    })
-    
-    // get indexNext for questionCurrent
-    .then(futureQuestion=>{
-      indexNext = futureQuestion.indexNext;
-
+      // start update pointers, find by either indexTrue or indexFalse
       // set currentQuestion's index as futureQuestion's indexNext
-      return Question.findByIdAndUpdate(idToUpdate, 
-        { $set: { indexNext: index } }
-      );
+      return Question.update({
+        nameQuiz,
+        index: indexToUpdate,
+        accepted: true,
+      },
+      {
+        $set: { indexNext: index }
+      });
     })
 
     // save choice in DB for historical purposes
@@ -110,10 +119,12 @@ router.put('/:idQuestion', jsonParser, jwtAuth, (req, res) => {
         },
         questionNext
       };
-      res.status(204).json(response);
+      console.log('response',response);
+
+      res.status(200).json(response);
     })
     .catch(err => {
-      res.status(500).json({ message: `Internal server error ${err}` })
+      res.status(500).json({ message: `Internal server error ${err}` });
     });
 });
 

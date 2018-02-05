@@ -13,7 +13,6 @@ const jsonParser = bodyParser.json();
 router.use(jsonParser);
 const passport = require('passport');
 const jwt = require('jsonwebtoken');
-const ObjectId = require('mongodb').ObjectId;
 const jwtAuth = passport.authenticate('jwt', { session: false });
 
 // @@@@@@@@@@@ HELPERS @@@@@@@@@@@@@
