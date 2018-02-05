@@ -45,13 +45,18 @@ const validateUserFieldsString = user => {
 
 const validateUserFieldsTrimmed = user => {
   const explicityTrimmedFields = ['username', 'password'];
-  const nonTrimmedField = explicityTrimmedFields.find(
-    field => user[field].trim() !== user[field]
-  );
-  if (nonTrimmedField) {
+  const nonTrimmedFields = [];
+  explicityTrimmedFields.forEach( field => {
+    if (user[field]) {
+      if (user[field].trim() !== user[field]) {
+        nonTrimmedFields.push(field);
+      }
+    }
+  });
+  if (nonTrimmedFields.length > 0) {
     return {
       message: 'Cannot start or end with whitespace',
-      location: nonTrimmedField
+      location: nonTrimmedFields.join(', ')
     };
   }
   return 'ok' ;
@@ -59,25 +64,26 @@ const validateUserFieldsTrimmed = user => {
 
 const validateUserFieldsSize = user => {  
   const sizedFields = {
-    username: { min: 1 },
+    username: { min: 1,  max: 99 },
     password: { min: 10, max: 72 }
   };
-  const tooSmallField = Object.keys(sizedFields).find(field =>
-    'min' in sizedFields[field] &&
-    user[field].trim().length < sizedFields[field].min
-  );
-  const tooLargeField = Object.keys(sizedFields).find(field =>
-    'max' in sizedFields[field] &&
-    user[field].trim().length > sizedFields[field].max
-  );
+  const tooSmallField = [];
+  const tooLargeField = [];
 
-  if (tooSmallField || tooLargeField) {
-    return {
-      message: tooSmallField
-        ? `Must be at least ${sizedFields[tooSmallField].min} characters long`
-        : `Must be at most ${sizedFields[tooLargeField].max} characters long`,
-      location: tooSmallField || tooLargeField
-    };
+  for(let prop in sizedFields) {
+    if (user[prop]) {
+      if (user[prop].length < sizedFields[prop].min) {
+        tooSmallField.push(`${prop} must be at least ${sizedFields[prop].min} characters.`);
+      } else if (user[prop].length > sizedFields[prop].max) {
+        tooLargeField.push(`${prop} cannot exceed ${sizedFields[prop].max} characters.`);
+      }
+    }
+  }
+
+  if (tooSmallField.length > 0 || tooLargeField.length > 0) {
+    const tooSmallMessage = tooSmallField.join(', ');
+    const tooLargeMessage = tooLargeField.join(', ');
+    return [tooSmallMessage, tooLargeMessage].join(', ');
   }
   return 'ok' ;
 };  
@@ -105,10 +111,15 @@ const validateUserFields = (user, type) => { // type = new or existing
   }
 };
 
-function confirmUniqueUsername(username) {
+function confirmUniqueUsername(username, type) {
+  if (!username && type !== 'new') {
+    return Promise.resolve();
+  }
+  console.log('confirmUniqueUsername', username);
   return User.find({ username })
-    .count()
+    // .count()
     .then(count => {
+      console.log('then count', count);
       if (count > 0) {
         return Promise.reject({
           reason: 'ValidationError',
@@ -142,7 +153,7 @@ router.post('/', jsonParser, (req, res) => {
   console.log('user validated');
   let { username, password, lastName, firstName, email } = userValid;
 
-  return confirmUniqueUsername(username)
+  return confirmUniqueUsername(username, 'new')
     .then(() => {
       console.log('hash');
       return User.hashPassword(password);
@@ -169,7 +180,7 @@ router.post('/', jsonParser, (req, res) => {
 // update a user profile
 router.put('/:id', jsonParser, jwtAuth, (req, res) => {
 
-  const user = validateUserFields(req.body, 'new');
+  const user = validateUserFields(req.body);
   console.log('user AFTER VALIDATION', user);
   let userValid;
   if (user !== 'ok') {
@@ -183,9 +194,8 @@ router.put('/:id', jsonParser, jwtAuth, (req, res) => {
 
   return confirmUniqueUsername(userValid.username) // returns Promise.resolve or .reject
     .then(() => {
-      return User.findById(req.params.id);
+      return User.findById(req.params.id).count();
     })
-    .count()
     .then(count => {
       if (count === 0) {
         return Promise.reject({

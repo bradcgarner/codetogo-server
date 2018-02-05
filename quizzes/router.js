@@ -6,12 +6,14 @@ const express = require('express');
 const router = express.Router();
 
 const { Quiz } = require('./models');
+const { Question } = require('../questions');
 
 const bodyParser = require('body-parser');
 const jsonParser = bodyParser.json();
 router.use(jsonParser);
 const passport = require('passport');
 const jwt = require('jsonwebtoken');
+const ObjectId = require('mongodb').ObjectId;
 const jwtAuth = passport.authenticate('jwt', { session: false });
 
 // @@@@@@@@@@@ HELPERS @@@@@@@@@@@@@
@@ -34,12 +36,30 @@ const questionApiRepr = function (question) {
 
 // access quiz by id (get only 1st question)
 router.get('/:quizId', (req, res) => {
+  let quiz, nameQuiz;
   return Quiz.findById(req.params.quizId)
-    .then(quiz => {
-      return res.status(200).json(quiz.apiRepr());
+    .then(quizFound => {
+      nameQuiz = quizFound.name;
+      console.log('foundQuiz',quizFound);
+      quiz = quizFound.apiRepr();
+
+      // find question matching indexCurrent
+      // need a failsafe incase this doesn't work...
+      return Question.findOne({
+        index: quiz.indexCurrent,
+        accepted: true,
+        nameQuiz
+      });
+    })
+    .then(questionFound=>{
+      console.log('questionFound',questionFound);
+
+      const questionCurrent = questionFound.apiRepr();
+      const response = Object.assign({}, quiz, questionCurrent);
+      return res.status(200).json(response);
     })
     .catch(err => {
-      res.status(500).json({ code: 500, message: 'Internal server error' });
+      res.status(500).json({ code: 500, message: `Internal server error ${err}` });
     });
 });
 
