@@ -32,7 +32,7 @@ QuestionSchema.methods.apiRepr = function () {
     id: this._id,
     question: this.question,
     typeQuestion: this.typeQuestion,
-    answers: this.answers.map(option=>delete option.correct), 
+    answers: this.answers.map(answer=>({option: answer.option, id: answer.id})), 
     typeAnswer: this.typeAnswer,
     source: this.source,
     reason: this.reason,

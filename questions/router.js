@@ -7,6 +7,7 @@ const router = express.Router();
 
 const { Question } = require('./models');
 const { Choice } = require('../choices/models');
+const { ObjectId } = require('mongodb').ObjectId;
 
 const bodyParser = require('body-parser');
 const jsonParser = bodyParser.json();
@@ -32,10 +33,15 @@ const setScore = (scorePrior, correct) => {
 };
 
 const formatQuestionOptionIds = question => {
+  console.log('in format, question', question);
   let correct = question.answers.filter(answer => answer.correct);
-  let correct_id = correct.map(answer=>String(answer._id));
-  let correctSort = correct_id.sort((a,b)=>a-b);   
+  console.log('correct', correct);
+  let correctId = correct.map(answer=>ObjectId(answer.id).toString());
+  console.log('correct_id', correctId);
+  let correctSort = correctId.sort((a,b)=>a-b);   
+  console.log('correctSort', correctSort);
   let correctJoin = correctSort.join(',');   
+  console.log('correctJoin', correctJoin);
   return correctJoin;
 };
 
@@ -65,6 +71,7 @@ router.put('/:idQuestion', jwtAuth, (req, res) => {
       scoreNew = setScore(score, correct);
       console.log('scoreNew',scoreNew);
       answers = currentQuestion.answers;
+      console.log('answers',answers);
       indexToUpdate = correct ? indexTrue : indexFalse;
       console.log('SCORING: correct questionIds ===', questionIds, 'and ', 'formattedChoices ===', formattedChoices);
       return correct;   // compare, return true or false, hoist
@@ -81,7 +88,8 @@ router.put('/:idQuestion', jwtAuth, (req, res) => {
     .then(foundQuestion=>{
       console.log('foundQuestion',foundQuestion);
       questionNext = foundQuestion.apiRepr();
-      
+      console.log('questionNext',questionNext);
+
       // respond to client here ????
 
       // start update pointers, find by either indexTrue or indexFalse
