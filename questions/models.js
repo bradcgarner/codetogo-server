@@ -11,11 +11,7 @@ const QuestionSchema = mongoose.Schema({
   nameQuiz: { type: String },
   question: { type: String },
   typeQuestion: { type: String }, // fact, code, trivia
-  answers: { type: Array },
-  // Answers does not have its own schema. Each answer is comprised of the following:
-  // option: { type: String },
-  // correct: { type: Boolean },
-  // id: { type: Number }, // Mongo is currently creating ObjectId here...
+  answers: { type: Array }, // see API documentation
   typeAnswer: { type: String }, // radio, checkbox, text
   source: { type: String },
   reason: { type: String }, // explanation of correct answer

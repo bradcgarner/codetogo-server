@@ -96,16 +96,12 @@ const validateUserFields = (user, type) => { // type = new or existing
   
   if (isPresentt !== 'ok' && type === 'new') {
     return isPresentt; 
-
   } else if (isStringg !== 'ok') {
     return isStringg;
-
   } else if (isTrimmedd !== 'ok' ) {
     return isTrimmedd;
-
   } else if (isSize !== 'ok' ) {
     return isSize;
-
   } else {
     return 'ok';
   }
@@ -115,11 +111,9 @@ function confirmUniqueUsername(username, type) {
   if (!username && type !== 'new') {
     return Promise.resolve();
   }
-  console.log('confirmUniqueUsername', username);
   return User.find({ username })
     // .count()
     .then(count => {
-      console.log('then count', count);
       if (count > 0) {
         return Promise.reject({
           reason: 'ValidationError',
@@ -136,59 +130,43 @@ function confirmUniqueUsername(username, type) {
 
 // create a new user
 router.post('/', jsonParser, (req, res) => {
-  console.log('POST RUNNING');
-  console.log('new user request body', req.body);
   const user = validateUserFields(req.body, 'new');
-  console.log('user AFTER VALIDATION', user);
   let userValid;
   if (user !== 'ok') {
-    console.log('not valid',user);
     user.reason = 'ValidationError';
     return res.status(422).json(user);
   } else {
-    console.log('valid');
     userValid = req.body;
   }
 
-  console.log('user validated');
   let { username, password, lastName, firstName, email } = userValid;
 
   return confirmUniqueUsername(username, 'new')
     .then(() => {
-      console.log('hash');
       return User.hashPassword(password);
     })
     .then(hash => {
-      console.log('create');
       return User.create({ username, password: hash, lastName, firstName, email });
     })
     .then(user => {
-      console.log('respond');
       return res.status(201).json(user.apiRepr());
     })
     .catch(err => {
-      console.log('catch');
       if (err.reason === 'ValidationError') {
-        console.log('validation error');
         return res.status(422).json(err);
       }
-      console.log('500');
       res.status(500).json({ code: 500, message: 'Internal server error' });
     });
 });
 
 // update a user profile
 router.put('/:id', jsonParser, jwtAuth, (req, res) => {
-
   const user = validateUserFields(req.body);
-  console.log('user AFTER VALIDATION', user);
   let userValid;
   if (user !== 'ok') {
-    console.log('not valid',user);
     user.reason = 'ValidationError';
     return res.status(422).json(user);
   } else {
-    console.log('valid');
     userValid = req.body;
   }
 
@@ -235,65 +213,15 @@ router.put('/:id', jsonParser, jwtAuth, (req, res) => {
     });
 });
 
-// update a user data (any data other than credentials)
-router.put('/:id/data', jwtAuth, jsonParser, (req, res) => {  
-  const updateUser = req.body;
-  console.log('req.params.id', req.params.id);
-  console.log('req.body at :id/data', req.body);
-  console.log('updateUser', updateUser);
-
-  User.findByIdAndUpdate(req.params.id,
-    { $set: {quizzes: updateUser.quizzes, recent: updateUser.recent } }, // recent: updateUser.recent
-    { new: true },
-    function (err, user) {
-      console.log('err after err, user',err);
-      if (err) return res.status(500).json({message: 'user not found', error: err});
-      console.log('found');
-      const filteredUser = user.apiRepr();    
-      console.log('filteredUser', filteredUser);
-      res.status(201).json(filteredUser);
-    });
-});
-
 // get user by id
 router.get('/user/:userId', jwtAuth, (req, res) => {
-  console.log('res', res);
   return User.findById(req.params.userId)
     .then(user => {
       const filteredUser = user.apiRepr();
       return res.status(200).json(filteredUser);
     })
     .catch(err => {
-      console.log(err);
       res.status(500).json({ code: 500, message: 'Internal server error' });
-    });
-});
-
-// @@@@@@@@@@@@@@@@@@ START ADMIN ENDPOINTS @@@@@@@@@@@@@@@@@
-
-// get all users DANGER ZONE!!!!
-router.get('/', (req, res) => {
-  console.log(User.find());
-  return User.find()
-    .then(users => {
-      let usersJSON = users.map(user=>user.apiRepr());
-      return res.status(200).json(usersJSON);
-    })
-    .catch(err => {
-      res.status(500).json({ code: 500, message: 'Internal server error' });
-    });
-});
-
-
-// delete user
-router.delete('/:id', jwtAuth, (req, res) => {
-  User
-    .findByIdAndRemove(req.params.id)
-    .then(() => {
-      res.status(204).end();
-    })
-    .catch(err => {
-      return res.status(500).json({ message: 'something went wrong' });
     });
 });
 

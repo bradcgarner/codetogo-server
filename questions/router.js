@@ -1,6 +1,5 @@
 'use strict';
 // endpoint is /api/questions/
-// index: helpers, put, post, delete (no post)
 
 const express = require('express');
 const router = express.Router();
@@ -16,7 +15,7 @@ const passport = require('passport');
 const jwt = require('jsonwebtoken');
 const jwtAuth = passport.authenticate('jwt', { session: false });
 
-// @@@@@@@@@@@@ FROM SPACED REP @@@@@@@@@@@@@@@@
+// @@@@@@@@@@@@ HELPERS @@@@@@@@@@@@@@@@
 
 const setScore = (scorePrior, correct) => {
   const multCorrect = 2;
@@ -33,15 +32,10 @@ const setScore = (scorePrior, correct) => {
 };
 
 const formatQuestionOptionIds = question => {
-  console.log('in format, question', question);
   let correct = question.answers.filter(answer => answer.correct);
-  console.log('correct', correct);
   let correctId = correct.map(answer=>ObjectId(answer.id).toString());
-  console.log('correct_id', correctId);
   let correctSort = correctId.sort((a,b)=>a-b);   
-  console.log('correctSort', correctSort);
   let correctJoin = correctSort.join(',');   
-  console.log('correctJoin', correctJoin);
   return correctJoin;
 };
 
@@ -51,29 +45,22 @@ const formatQuestionOptionIds = question => {
 router.put('/:idQuestion', jwtAuth, (req, res) => {
   
   const idQuestion = req.params.idQuestion;
-  const { idUser, nameQuiz, idQuiz, index, score, choices, indexNext, indexTrue, indexFalse } = req.body;
+  const { idUser, nameQuiz, idQuiz, indexCurrent, score, choices, indexNext, indexTrue, indexFalse } = req.body;
   let correct = false;
   let scoreNew = score;
   let questionNext, indexToUpdate, answers;
   let formattedChoices = (choices).sort((a,b) => a-b).join(','); 
   
-  console.log('idQuestion',idQuestion);
-
   // get the question by id from db, 
   return Question.findById(idQuestion)
     .then(currentQuestion=>{
-      console.log('currentQuestion',currentQuestion);
       
       // score the choice, set new score
       const questionIds = formatQuestionOptionIds(currentQuestion);     // format answers as a sorted string
-      console.log('questionIds',questionIds);
       correct = questionIds === formattedChoices;   // compare, return true or false, hoist
       scoreNew = setScore(score, correct);
-      console.log('scoreNew',scoreNew);
       answers = currentQuestion.answers;
-      console.log('answers',answers);
       indexToUpdate = correct ? indexTrue : indexFalse;
-      console.log('SCORING: correct questionIds ===', questionIds, 'and ', 'formattedChoices ===', formattedChoices);
       return correct;   // compare, return true or false, hoist
     })
 
@@ -86,21 +73,30 @@ router.put('/:idQuestion', jwtAuth, (req, res) => {
       });
     })
     .then(foundQuestion=>{
-      console.log('foundQuestion',foundQuestion);
       questionNext = foundQuestion.apiRepr();
-      console.log('questionNext',questionNext);
 
       // respond to client here ????
 
       // start update pointers, find by either indexTrue or indexFalse
-      // set currentQuestion's index as futureQuestion's indexNext
+      // set find the question that points to the current question and update its pointer
+      return Question.update({
+        nameQuiz,
+        indexNext: indexCurrent,
+        accepted: true,
+      },
+      {
+        $set: { indexNext }
+      });
+    })
+    // set currentQuestion's index as futureQuestion's indexNext
+    .then(()=>{
       return Question.update({
         nameQuiz,
         index: indexToUpdate,
         accepted: true,
       },
       {
-        $set: { indexNext: index }
+        $set: { indexNext: indexCurrent }
       });
     })
 
@@ -112,7 +108,10 @@ router.put('/:idQuestion', jwtAuth, (req, res) => {
     // DB: update questionCurrent score and indexNext
     .then(()=>{
       return Question.findByIdAndUpdate(req.params.idQuestion,
-        { $set: { score: scoreNew, indexNext } }
+        { $set: {
+          score: scoreNew,
+          indexNext: correct ? indexTrue : indexFalse,
+        } }
       );
     })
 
@@ -127,8 +126,6 @@ router.put('/:idQuestion', jwtAuth, (req, res) => {
         },
         questionNext
       };
-      console.log('response',response);
-
       res.status(200).json(response);
     })
     .catch(err => {
