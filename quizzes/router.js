@@ -24,18 +24,15 @@ router.get('/:quizId', (req, res) => {
       nameQuiz = quizFound.name;
       quiz = quizFound.apiRepr();
 
-      // find question matching indexCurrent
-      // need a failsafe incase this doesn't work...
-      return Question.findOne({
-        index: quiz.indexCurrent,
+      // find questions matching indexCurrent
+      return Question.find({
         accepted: true,
-        nameQuiz
+        idQuiz: req.params.quizId
       });
     })
-    .then(questionFound=>{
-
-      const questionCurrent = questionFound.apiRepr();
-      const response = Object.assign({}, quiz, questionCurrent);
+    .then(questionsFound=>{
+      const questions = questionsFound.map(question=>question.apiRepr()).sort((a,b)=>a.index-b.index);
+      const response = Object.assign({}, quiz, {questions: questions});
       return res.status(200).json(response);
     })
     .catch(err => {

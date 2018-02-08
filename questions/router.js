@@ -48,7 +48,7 @@ router.put('/:idQuestion', jwtAuth, (req, res) => {
   const { idUser, nameQuiz, idQuiz, indexCurrent, score, choices, indexNext, indexTrue, indexFalse } = req.body;
   let correct = false;
   let scoreNew = score;
-  let questionNext, indexToUpdate, answers;
+  let questionNext, indexInsertAfter, questionInsertAfter, questionInsertBefore, answers;
   let formattedChoices = (choices).sort((a,b) => a-b).join(','); 
   
   // get the question by id from db, 
@@ -60,7 +60,7 @@ router.put('/:idQuestion', jwtAuth, (req, res) => {
       correct = questionIds === formattedChoices;   // compare, return true or false, hoist
       scoreNew = setScore(score, correct);
       answers = currentQuestion.answers;
-      indexToUpdate = correct ? indexTrue : indexFalse;
+      indexInsertAfter = correct ? indexTrue : indexFalse;
       return correct;   // compare, return true or false, hoist
     })
 
@@ -78,25 +78,33 @@ router.put('/:idQuestion', jwtAuth, (req, res) => {
       // respond to client here ????
 
       // start update pointers, find by either indexTrue or indexFalse
+      
+      
+      // 3) questionInsertBefore.indexNext = questionCurrent.indexNext
+      // 4) questionCurrent.indexNext = questionInsertBefore.index
+
       // set find the question that points to the current question and update its pointer
       return Question.update({
         nameQuiz,
-        indexNext: indexCurrent,
+        indexNext: indexCurrent,  // 1) questionAfter = questions[questionTrue.indexNext]
         accepted: true,
       },
       {
-        $set: { indexNext }
-      });
+        $set: { indexNext }       // i.e. questionCurrent.indexNext = questionCurrent.indexNext
+      },
+      { new: false});
     })
     // set currentQuestion's index as futureQuestion's indexNext
-    .then(()=>{
+    .then(questionUpdated=>{
+      questionInsertAfter = questionUpdated;
+
       return Question.update({
         nameQuiz,
-        index: indexToUpdate,
+        index: indexInsertAfter,  // 2) questionInsertAfter.indexNext = questionCurrent.index
         accepted: true,
       },
       {
-        $set: { indexNext: indexCurrent }
+        $set: { indexNext: indexCurrent } // i.e. questionInsertAfter.indexNext = questionCurrent.index
       });
     })
 

@@ -26,6 +26,7 @@ const QuestionSchema = mongoose.Schema({
 QuestionSchema.methods.apiRepr = function () {
   return { 
     id: this._id,
+    idQuiz: this.idQuiz,
     question: this.question,
     typeQuestion: this.typeQuestion,
     answers: this.answers.map(answer=>({option: answer.option, id: answer.id})), 
