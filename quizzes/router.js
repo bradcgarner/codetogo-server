@@ -164,4 +164,4 @@ router.put('/:idQuiz/users/:idUser', (req, res) => {
     });
 });
 
-module.exports = { router, scoreQuizzes };
+module.exports = { router };

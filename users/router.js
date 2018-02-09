@@ -112,10 +112,8 @@ function confirmUniqueUsername(username, type) {
     return Promise.resolve();
   }
   return User.find({ username })
-    // .count()
     .then(count => {
       const maxMatch = type === 'existingUser' ? 1 : 0 ;
-      // console.log('count', count);
       if (count > maxMatch) {
         return Promise.reject({
           reason: 'ValidationError',

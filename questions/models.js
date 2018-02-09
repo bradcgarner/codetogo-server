@@ -5,21 +5,21 @@ const mongoose = require('mongoose');
 mongoose.Promise = global.Promise;
 
 const QuestionSchema = mongoose.Schema({
-  accepted: { type: Boolean }, // accepted by Admin for inclusion
-  idUser: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // each question belongs to 1 only user
-  idQuiz: { type: mongoose.Schema.Types.ObjectId, ref: 'Quiz' }, // each question belongs to 1 only quiz
-  nameQuiz: { type: String },
-  version: { type: Number },
-  question: { type: String },
-  typeQuestion: { type: String }, // fact, code, trivia
-  answers: { type: Array }, // see API documentation
-  typeAnswer: { type: String }, // radio, checkbox, text
-  source: { type: String },
-  reason: { type: String }, // explanation of correct answer
-  difficulty: { type: Number },
-  score: { type: Number }, // user's score, after copied to user, defaults to 2
-  index: { type: Number }, // sort order of array
-  indexNext: { type: Number }, // index number of array
+  accepted:         { type: Boolean }, // accepted by Admin for inclusion
+  idUser:           { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // each question belongs to 1 only user
+  idQuiz:           { type: mongoose.Schema.Types.ObjectId, ref: 'Quiz' }, // each question belongs to 1 only quiz
+  nameQuiz:         { type: String },
+  version:          { type: Number },
+  question:         { type: String },
+  typeQuestion:     { type: String }, // fact, code, trivia
+  answers:          { type: Array }, // see API documentation
+  typeAnswer:       { type: String }, // radio, checkbox, text
+  source:           { type: String },
+  reason:           { type: String }, // explanation of correct answer
+  difficulty:       { type: Number },
+  score:            { type: Number }, // user's score, after copied to user, defaults to 2
+  index:            { type: Number }, // sort order of array
+  indexNext:        { type: Number }, // index number of array
   timestampCreated: { type: String }, // created by Admin
   timestampUpdated: { type: String }, // last answered by User
 });

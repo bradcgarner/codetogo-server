@@ -12,7 +12,6 @@ const UserSchema = mongoose.Schema({
   lastName:  { type: String, required: true },
   email:     { type: String, required: true },
   avatar:    { type: String },
-  badges:    { type: Array },
 });
 
 UserSchema.methods.apiRepr = function () {
@@ -23,7 +22,6 @@ UserSchema.methods.apiRepr = function () {
     lastName: this.lastName,
     email: this.email,
     avatar: this.avatar,
-    badges: this.badges, 
   };
 };
 
