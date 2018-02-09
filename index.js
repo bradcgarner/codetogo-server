@@ -9,21 +9,16 @@ mongoose.Promise = global.Promise;
 
 const { router: userRouter } = require('./users');
 const { router: quizRouter } = require('./quizzes');
-const { router: choiceRouter } = require('./choices');
-
-const { router: authRouter, basicStrategy, jwtStrategy } = require('./auth');
+const { router: questionRouter } = require('./questions');
+const { router: adminRouter } = require('./admin');
+const { router: authRouter, localStrategy, jwtStrategy } = require('./auth');
 const passport = require('passport');
-passport.use(basicStrategy);
+passport.use(localStrategy);
 passport.use(jwtStrategy);
 
 const cors = require('cors');
 const morgan = require('morgan');
 
-// app.use(
-//   morgan(process.env.NODE_ENV === 'production' ? 'common' : 'dev', {
-//     skip: (req, res) => process.env.NODE_ENV === 'test'
-//   })
-// );
 app.use(morgan('combined'));
 
 app.use(
@@ -32,18 +27,17 @@ app.use(
   })
 );
 
-app.use((req,res,next)=>{
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'POST, PUT');
-  res.header('Access-Control-Request-Headers');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
-  next();
-});
+// option below is to serve up html from the server, vs client
+app.use(express.static('public'));
+// app.get('/', (req, res) => {
+//   res.sendFile(__dirname + '/views/index.html');
+// });
 
-app.use('/api/users', userRouter);
-app.use('/api/choices', choiceRouter);
-app.use('/api/quizzes', quizRouter);
+app.use('/api/admin/', adminRouter);
 app.use('/api/auth/', authRouter);
+app.use('/api/users', userRouter);
+app.use('/api/quizzes', quizRouter);
+app.use('/api/questions', questionRouter);
 
 app.use('*', (req, res) => {
   return res.status(404).json({ message: 'Not Found' });

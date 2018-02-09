@@ -6,33 +6,24 @@ const mongoose = require('mongoose');
 mongoose.Promise = global.Promise;
 
 const UserSchema = mongoose.Schema({
+  username:  { type: String, required: true, unique: true },
+  password:  { type: String, required: true },
   firstName: { type: String, required: true },
-  lastName: { type: String, required: true },
-  username: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
-  quizzes: Array,
-  //   id: { type: mongoose.Schema.Types.ObjectId, ref: 'Quiz' },
-  //   name: { type: String },
-  //   attempt: { type: Number },
-  //   archive: { type: Boolean },
-  //   total: { type: Number },
-  //   completed: { type: Number },
-  //   correct: { type: Number },
-  //   category: {type: String },
-  //   difficulty: {type: Number }
-  badges: { type: String },
-  recent: [{type: String}]
+  lastName:  { type: String, required: true },
+  email:     { type: String, required: true },
+  avatar:    { type: String },
+  badges:    { type: Array },
 });
 
 UserSchema.methods.apiRepr = function () {
   return { 
+    id: this._id,
+    username: this.username,
     firstName: this.firstName,
     lastName: this.lastName,
-    username: this.username,
-    quizzes: this.quizzes, 
+    email: this.email,
+    avatar: this.avatar,
     badges: this.badges, 
-    recent: this.recent,
-    id: this._id 
   };
 };
 
