@@ -114,7 +114,9 @@ function confirmUniqueUsername(username, type) {
   return User.find({ username })
     // .count()
     .then(count => {
-      if (count > 0) {
+      const maxMatch = type === 'existingUser' ? 1 : 0 ;
+      // console.log('count', count);
+      if (count > maxMatch) {
         return Promise.reject({
           reason: 'ValidationError',
           message: 'Username already taken',
@@ -185,9 +187,8 @@ router.put('/:id', jsonParser, jwtAuth, (req, res) => {
       }
       if (userValid.password) {
         return User.hashPassword(userValid.password);
-      } else {
-        return false;
-      }
+      } 
+      return false;
     })
     .then(hash => {
       if (hash) {
