@@ -12,9 +12,7 @@ const UserSchema = mongoose.Schema({
   lastName:  { type: String, required: true },
   email:     { type: String, required: true },
   avatar:    { type: String },
-  quizzes:   { type: Array },
   badges:    { type: Array },
-  recent:    { type: Array },
 });
 
 UserSchema.methods.apiRepr = function () {
@@ -25,9 +23,7 @@ UserSchema.methods.apiRepr = function () {
     lastName: this.lastName,
     email: this.email,
     avatar: this.avatar,
-    quizzes: this.quizzes, 
     badges: this.badges, 
-    recent: this.recent,
   };
 };
 

@@ -15,6 +15,8 @@ const quiz = {
   description: 'This is a quiz of HTML',
   category: 'HTML',
   difficulty: 1,
+  version: 1,
+  notes: '',
 };
 
 const questions = [
@@ -123,6 +125,7 @@ const formatQuestions = (questions, idQuiz) => {
         index,
         indexNext: (index + 1) === questions.length ? 0 : index + 1,
         timestampCreated: new Date(),
+        version: quiz.version,
       }
     );
   });

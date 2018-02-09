@@ -59,6 +59,8 @@ router.put('/:idQuiz/users/:idUser', (req, res) => {
       // copy quiz to user... damn Mongo doesn't allow Object.assign
       const quizToCreate = {
         name: quizFound.name,
+        version: quizFound.version,
+        notes: quizFound.notes,
         description: quizFound.description,
         category: quizFound.category,
         difficulty: quizFound.difficulty,
@@ -107,6 +109,7 @@ router.put('/:idQuiz/users/:idUser', (req, res) => {
           idUser: ObjectId(req.params.idUser),
           idQuiz: ObjectId(idQuizUser),
           nameQuiz: question.name,
+          version: question.version,
           question: question.question,
           typeQuestion: question.typeQuestion,
           answers: question.answers,
@@ -143,6 +146,8 @@ router.put('/:idQuiz/users/:idUser', (req, res) => {
       }
       const response = {
         name: quizUser.name,
+        version: quizUser.version,
+        notes: quizUser.notes,
         description: quizUser.description,
         category: quizUser.category,
         difficulty: quizUser.difficulty,
@@ -150,7 +155,7 @@ router.put('/:idQuiz/users/:idUser', (req, res) => {
         idUser: quizUser.idUser,
         score: quizUser.score,
         indexCurrent: quizUser.indexCurrent,
-        questions: questions
+        questions: questions,
       };
       return res.status(200).json(response);
     })

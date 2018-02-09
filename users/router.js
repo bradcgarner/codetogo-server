@@ -213,16 +213,4 @@ router.put('/:id', jsonParser, jwtAuth, (req, res) => {
     });
 });
 
-// get user by id
-router.get('/user/:userId', jwtAuth, (req, res) => {
-  return User.findById(req.params.userId)
-    .then(user => {
-      const filteredUser = user.apiRepr();
-      return res.status(200).json(filteredUser);
-    })
-    .catch(err => {
-      res.status(500).json({ code: 500, message: 'Internal server error' });
-    });
-});
-
 module.exports = { router };
