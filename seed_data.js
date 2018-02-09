@@ -15,12 +15,26 @@ const quiz = {
   description: 'This is a quiz of HTML',
   category: 'HTML',
   difficulty: 1,
-  total: 1,
 };
 
 const questions = [
   {
-    question: 'how did the chicken cross the street?',
+    question: 'how did 0 chicken cross the street?',
+    typeQuestion: 'trivia',
+    answers: [
+      { option: 'a good option', correct: true },
+      { option: 'a bad option' }
+    ],
+    typeAnswer: 'radio',
+    source: [
+      'The Google',
+      'bradgarner.com'
+    ],
+    reason: 'because I just know!',
+    difficulty: 3,
+  },
+  {
+    question: 'how did 1 chicken cross the street?',
     typeQuestion: 'trivia',
     answers: [
       { option: 'a good option', correct: true },
@@ -62,10 +76,23 @@ const questions = [
       'bradgarner.com'
     ],
     reason: 'because I just know!',
-    difficulty: 3,
   },
   {
     question: 'how did 4 chicken cross the street?',
+    typeQuestion: 'trivia',
+    answers: [
+      { option: 'a good option', correct: true },
+      { option: 'a bad option' }
+    ],
+    typeAnswer: 'radio',
+    source: [
+      'The Google',
+      'bradgarner.com'
+    ],
+    reason: 'because I just know!',
+  },
+  {
+    question: 'how did 5 chicken cross the street?',
     typeQuestion: 'trivia',
     answers: [
       { option: 'a good option', correct: true },

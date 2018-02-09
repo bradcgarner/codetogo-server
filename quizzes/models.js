@@ -17,7 +17,7 @@ mongoose.Promise = global.Promise;
 
 const QuizSchema = mongoose.Schema({
   idUser: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // we'll set library to 0
-  name: { type: String, required: true, unique: true},
+  name: { type: String},
   category: { type: String }, // HTML, CSS, JS
   difficulty: { type: Number }, // scale of 1 easy 5 advanced
   description: { type: String },
