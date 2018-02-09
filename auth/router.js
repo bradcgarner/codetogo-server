@@ -5,6 +5,7 @@ const express = require('express');
 const router = express.Router();
 
 const { User } = require('../users');
+const { Quiz } = require('../quizzes');
 
 const config = require('../config');
 const passport = require('passport');
@@ -30,6 +31,7 @@ const jwtAuth = passport.authenticate('jwt', { session: false });
 router.post('/login', localAuth, (req, res) => {
   
   let user = req.body;
+  let userApiRepr, authToken, idUser;
   return User.findOne({username: user.username})
     .then( userFound => {
       const userForToken = Object.assign( {}, {
@@ -37,9 +39,20 @@ router.post('/login', localAuth, (req, res) => {
         first_name: userFound.firstName,
         last_name: userFound.lastName,
       });
-      const userApiRepr = userFound.apiRepr();    
-      const authToken = createAuthToken(userForToken);
-      const userForResponse = Object.assign({}, userApiRepr, {authToken: authToken});
+      userApiRepr = userFound.apiRepr();    
+      authToken = createAuthToken(userForToken);
+      idUser = userApiRepr.id;
+    })
+    .then(()=>{
+      return Quiz.find({idUser: idUser});
+    })
+    .then(userQuizzesFound=>{
+      const userForResponse = Object.assign({}, userApiRepr,
+        {
+          authToken: authToken,
+          quizzes: userQuizzesFound
+        }
+      );
       res.status(201).json(userForResponse);
     })
     .catch( err => {
