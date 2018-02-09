@@ -6,14 +6,16 @@ const router = express.Router();
 
 const { User } = require('../users');
 const { Quiz } = require('../quizzes');
+const { Badge } = require('../badges');
+const { Activity } = require('../activity');
 
 const config = require('../config');
 const passport = require('passport');
 const jwt = require('jsonwebtoken');
 const bodyParser = require('body-parser');
 
-const { localStrategy } = require('./local-strategy');
-const { jwtStrategy } = require('./jwt-strategy');
+// const { localStrategy } = require('./local-strategy');
+// const { jwtStrategy } = require('./jwt-strategy');
 
 const createAuthToken = function (user) {
   return jwt.sign({ user }, config.JWT_SECRET, {
@@ -30,28 +32,42 @@ const jwtAuth = passport.authenticate('jwt', { session: false });
 
 router.post('/login', localAuth, (req, res) => {
   
-  let user = req.body;
-  let userApiRepr, authToken, idUser;
-  return User.findOne({username: user.username})
+  let userFromClient = req.body;
+  let user, quizList, badges, activity;
+  return User.findOne({username: userFromClient.username})
     .then( userFound => {
       const userForToken = Object.assign( {}, {
         username: userFound.username,
         first_name: userFound.firstName,
         last_name: userFound.lastName,
       });
-      userApiRepr = userFound.apiRepr();    
-      authToken = createAuthToken(userForToken);
-      idUser = userApiRepr.id;
+      const userApiRepr = userFound.apiRepr();    
+      const authToken = createAuthToken(userForToken);
+      user = Object.assign({}, userApiRepr, {authToken: authToken});
     })
+    // find quizzes
     .then(()=>{
-      return Quiz.find({idUser: idUser});
+      return Quiz.find({idUser: user.id});
     })
     .then(userQuizzesFound=>{
-      const userForResponse = Object.assign({}, userApiRepr,
-        {
-          authToken: authToken,
-          quizzes: userQuizzesFound
-        }
+      quizList = userQuizzesFound;
+    })
+    // find badges
+    .then(()=>{
+      return Badge.find({idUser: user.id});
+    })
+    .then(userBadgesFound=>{
+      badges = userBadgesFound;
+    })
+    // find activity
+    .then(()=>{
+      return Activity.find({idUser: user.id});
+    })
+    .then(userActivityFound=>{
+      activity = userActivityFound;
+
+      // respond
+      const userForResponse = Object.assign({},{ user, quizList, badges, activity }
       );
       res.status(201).json(userForResponse);
     })
