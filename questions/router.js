@@ -17,18 +17,9 @@ const jwtAuth = passport.authenticate('jwt', { session: false });
 
 // @@@@@@@@@@@@ HELPERS @@@@@@@@@@@@@@@@
 
-const setScore = (scorePrior, correct) => {
-  const multCorrect = 2;
-  const multIncorrect = .5;
-  let score;
-  let right;
-  if (correct) {
-    score = scorePrior * multCorrect;
-  } 
-  else {
-    score = Math.ceil(scorePrior * multIncorrect);  
-  } 
-  return score;
+const setScore = (scorePrior, correct, multIfTrue, multIfFalse) => {
+  if (correct) return scorePrior * multIfTrue;
+  return Math.ceil(scorePrior * multIfFalse);
 };
 
 const formatQuestionOptionIds = question => {
@@ -45,95 +36,128 @@ const formatQuestionOptionIds = question => {
 router.put('/:idQuestion', jwtAuth, (req, res) => {
   
   const idQuestion = req.params.idQuestion;
-  const { idUser, nameQuiz, idQuiz, indexCurrent, score, choices, indexNext, indexTrue, indexFalse } = req.body;
+  console.log('idQuestion', idQuestion);
+  const { 
+    idUser,
+    idQuiz, 
+    // nameQuiz,
+    choices,
+    multIfTrue,
+    multIfFalse,
+    indexCurrent,
+    scorePrior, 
+    indexNextPrior, 
+    indexInsertAfterIfTrue, 
+    indexInsertAfterIfFalse,
+    indexInsertBeforeIfTrue,
+    indexInsertBeforeIfFalse 
+  } = req.body;
   let correct = false;
-  let scoreNew = score;
-  let questionNext, indexInsertAfter, questionInsertAfter, questionInsertBefore, answers;
-  let formattedChoices = (choices).sort((a,b) => a-b).join(','); 
+  let scoreNew = scorePrior;
+  let indexInsertAfter, indexInsertBefore;
+  let indexRedirect, indexNextNew, indexInsertAfterNext, indexRedirectNext, answers;
+  const formattedChoices = (choices).sort((a,b) => a-b).join(','); 
+  console.log( 'idUser',idUser,
+    'idQuiz', idQuiz,
+    // 'nameQuiz',nameQuiz,
+    'choices',choices,
+    'multIfTrue',multIfTrue,
+    'multIfFalse',multIfFalse,
+    'indexCurrent',indexCurrent,
+    'scorePrior', scorePrior,
+    'indexNextPrior', indexNextPrior,
+    'indexInsertAfterIfTrue', indexInsertAfterIfTrue,
+    'indexInsertAfterIfFalse',indexInsertAfterIfFalse,
+    'indexInsertBeforeIfTrue',indexInsertBeforeIfTrue,
+    'indexInsertBeforeIfFalse',indexInsertBeforeIfFalse );
+  console.log('formattedChoices',formattedChoices);
   
   // get the question by id from db, 
   return Question.findById(idQuestion)
     .then(currentQuestion=>{
+      console.log('currentQuestion',currentQuestion);
       
       // score the choice, set new score
-      const questionIds = formatQuestionOptionIds(currentQuestion);     // format answers as a sorted string
-      correct = questionIds === formattedChoices;   // compare, return true or false, hoist
-      scoreNew = setScore(score, correct);
+      const formattedCorrectAnswers = formatQuestionOptionIds(currentQuestion);     // format answers as a sorted string
+      console.log('formattedCorrectAnswers',formattedCorrectAnswers);
+      correct = formattedCorrectAnswers === formattedChoices;   // compare, return true or false, hoist
+      console.log('correct',correct);
+      scoreNew = setScore(scorePrior, correct, multIfTrue, multIfFalse);
+      console.log('scoreNew',scoreNew);
       answers = currentQuestion.answers;
-      indexInsertAfter = correct ? indexTrue : indexFalse;
-      return correct;   // compare, return true or false, hoist
+      console.log('answers',answers);
+      indexInsertAfter = correct ? indexInsertAfterIfTrue : indexInsertAfterIfFalse;
+      console.log('indexInsertAfter',indexInsertAfter);
+      indexInsertBefore = correct ? indexInsertBeforeIfTrue : indexInsertBeforeIfFalse;
+      console.log('indexInsertBefore',indexInsertBefore);
+      indexNextNew = indexInsertBefore;
+      console.log('indexNextNew',indexNextNew);
+      indexInsertAfterNext = indexCurrent;
+      console.log('indexInsertAfterNext',indexInsertAfterNext);
+
+      // FIND REDIRECT (WHAT POINTS TO CURRENT QUESTION NOW)
+      return Question.find(
+        {idQuiz: ObjectId(idQuiz),
+          accepted: true,
+          indexNext: indexCurrent}
+      );
     })
-
-    // get questionNext
-    .then(()=>{
-      return Question.findOne({
-        nameQuiz,
-        index: indexNext,
-        accepted: true,
-      });
-    })
-    .then(foundQuestion=>{
-      questionNext = foundQuestion.apiRepr();
-
-      // respond to client here ????
-
-      // start update pointers, find by either indexTrue or indexFalse
-      
-      
-      // 3) questionInsertBefore.indexNext = questionCurrent.indexNext
-      // 4) questionCurrent.indexNext = questionInsertBefore.index
-
-      // set find the question that points to the current question and update its pointer
-      return Question.update({
-        nameQuiz,
-        indexNext: indexCurrent,  // 1) questionAfter = questions[questionTrue.indexNext]
-        accepted: true,
-      },
-      {
-        $set: { indexNext }       // i.e. questionCurrent.indexNext = questionCurrent.indexNext
-      },
-      { new: false});
-    })
-    // set currentQuestion's index as futureQuestion's indexNext
-    .then(questionUpdated=>{
-      questionInsertAfter = questionUpdated;
-
-      return Question.update({
-        nameQuiz,
-        index: indexInsertAfter,  // 2) questionInsertAfter.indexNext = questionCurrent.index
-        accepted: true,
-      },
-      {
-        $set: { indexNext: indexCurrent } // i.e. questionInsertAfter.indexNext = questionCurrent.index
-      });
-    })
-
-    // save choice in DB for historical purposes
-    .then(() =>{
-      return Choice.create({idUser, idQuiz, idQuestion, choices, correct });
-    })
-
-    // DB: update questionCurrent score and indexNext
-    .then(()=>{
-      return Question.findByIdAndUpdate(req.params.idQuestion,
-        { $set: {
-          score: scoreNew,
-          indexNext: correct ? indexTrue : indexFalse,
-        } }
+    // UPDATE REDIRECT
+    .then(redirectFound=>{
+      console.log('redirectFound', redirectFound);
+      indexRedirect = redirectFound[0].index;
+      indexRedirectNext = indexNextPrior;
+      console.log('indexRedirect', indexRedirect);
+      return Question.update(
+        {idQuiz: ObjectId(idQuiz),
+          accepted: true,
+          index: indexRedirect},
+        {$set: {
+          indexNext: indexRedirectNext}}
       );
     })
 
-    // respond to client
-    .then(() => {
+    // UPDATE CURRENT QUESTION (POINTERS & SCORE)
+    .then(()=>{
+      return Question.findByIdAndUpdate(idQuestion,
+        {$set: {score: scoreNew, indexNext: indexNextNew}},
+        {new: true}
+      );
+    })
+
+    // UPDATE INSERTAFTER POINTER
+    .then(updatedQuestion=>{
+      console.log('updatedQuestion',updatedQuestion);
+      return Question.update(
+        {idQuiz: ObjectId(idQuiz),
+          accepted: true,
+          index: indexInsertAfter},
+        {$set: {
+          indexNext: indexInsertAfterNext
+        }}
+      );
+    })
+
+    // SAVE CHOICE FOR FUTURE USE
+    .then(() =>{
+      return Choice.create({idUser, idQuiz, idQuestion, choices, correct }, {new: true});
+    })
+
+    // RESPONSE TO CLIENT
+    .then(choiceCreated => {
+      console.log('choiceCreated',choiceCreated);
       const response = {
-        questionCurrent: {
-          score: scoreNew,
-          correct,
-          indexNext,
-          answers
-        },
-        questionNext
+        answers,
+        correct,
+        indexInsertBefore,
+        indexInsertAfter,
+        indexRedirect,
+        scoreNew,
+        indexNextNew,
+        indexInsertAfterNext, 
+        indexRedirectNext,
       };
+      console.log('response',response);
       res.status(200).json(response);
     })
     .catch(err => {
