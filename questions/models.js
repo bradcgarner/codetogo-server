@@ -9,6 +9,7 @@ const QuestionSchema = mongoose.Schema({
   idUser: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // each question belongs to 1 only user
   idQuiz: { type: mongoose.Schema.Types.ObjectId, ref: 'Quiz' }, // each question belongs to 1 only quiz
   nameQuiz: { type: String },
+  version: { type: Number },
   question: { type: String },
   typeQuestion: { type: String }, // fact, code, trivia
   answers: { type: Array }, // see API documentation
@@ -27,6 +28,7 @@ QuestionSchema.methods.apiRepr = function () {
   return { 
     id: this._id,
     idQuiz: this.idQuiz,
+    version: this.version,
     question: this.question,
     typeQuestion: this.typeQuestion,
     answers: this.answers.map(answer=>({option: answer.option, id: answer.id})), 

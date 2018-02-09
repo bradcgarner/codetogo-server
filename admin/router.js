@@ -5,7 +5,7 @@ const router = express.Router();
 const { Quiz } = require('../quizzes');
 
 router.get('/initialize', (req, res) => {
-  return Quiz.find()
+  return Quiz.find({library: true})
     .then(quizzes => {
       const quizzesArray = quizzes.map(quiz => quiz.initializeRepr());
       const response = { quizzes: quizzesArray }; // property of object in case we want more properties later

@@ -17,14 +17,16 @@ mongoose.Promise = global.Promise;
 
 const QuizSchema = mongoose.Schema({
   idUser: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // we'll set library to 0
-  name: { type: String},
+  name: { type: String },
   category: { type: String }, // HTML, CSS, JS
   difficulty: { type: Number }, // scale of 1 easy 5 advanced
-  description: { type: String },
+  description: { type: String }, // timeless subject matter description (see notes for versioning separately)
   total: { type: Number }, // total number of questions, populated via script
-  score: { type: Number },
-  indexCurrent: { type: Number }, // default to 0
+  score: { type: Number }, // default to 0 by script
+  indexCurrent: { type: Number }, // default to 0 by script
   library: { type: Boolean },
+  version: { type: Number },
+  notes: { type: String }, // notes about this version
 });
 
 QuizSchema.methods.apiRepr = function () {
@@ -37,7 +39,10 @@ QuizSchema.methods.apiRepr = function () {
     description: this.description,
     total: this.total,
     score: this.score,
-    indexCurrent: this.indexCurrent };
+    indexCurrent: this.indexCurrent,
+    version: this.version,
+    notes: this.notes,
+  };
 };
 
 QuizSchema.methods.initializeRepr = function () {
@@ -48,6 +53,8 @@ QuizSchema.methods.initializeRepr = function () {
     difficulty: this.difficulty,
     description: this.description,
     total: this.total,
+    version: this.version,
+    notes: this.notes,
   };
 };
 
