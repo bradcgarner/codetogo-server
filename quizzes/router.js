@@ -105,17 +105,17 @@ router.put('/:idQuiz/users/:idUser', (req, res) => {
       // copy quiz to user... damn Mongo doesn't allow Object.assign
       const quizToCreate = {
         idOrigin: ObjectId(req.params.idQuiz),
+        idUser: ObjectId(req.params.idUser),
+        library: false,
         name: quizFound.name,
         version: quizFound.version,
         notes: quizFound.notes,
-        description: quizFound.description,
         category: quizFound.category,
+        description: quizFound.description,
         difficulty: quizFound.difficulty,
         total: quizFound.total,
-        idUser: ObjectId(req.params.idUser),
         score: 0,
         indexCurrent: 0,
-        library: false,
       };
       // console.log('quizToCreate',quizToCreate);
       return Quiz.create(quizToCreate);

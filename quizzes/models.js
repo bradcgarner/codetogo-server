@@ -18,16 +18,16 @@ mongoose.Promise = global.Promise;
 const QuizSchema = mongoose.Schema({
   idOrigin:     { type: mongoose.Schema.Types.ObjectId, ref: 'Quiz' },
   idUser:       { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // we'll set library to 0
+  library:      { type: Boolean },
   name:         { type: String },
+  version:      { type: Number },
+  notes:        { type: String }, // notes about this version
   category:     { type: String }, // HTML, CSS, JS
-  difficulty:   { type: Number }, // scale of 1 easy 5 advanced
   description:  { type: String }, // timeless subject matter description (see notes for versioning separately)
+  difficulty:   { type: Number }, // scale of 1 easy 5 advanced
   total:        { type: Number }, // total number of questions, populated via script
   score:        { type: Number }, // default to 0 by script
   indexCurrent: { type: Number }, // default to 0 by script
-  library:      { type: Boolean },
-  version:      { type: Number },
-  notes:        { type: String }, // notes about this version
 });
 
 QuizSchema.methods.apiRepr = function () {

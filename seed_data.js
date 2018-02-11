@@ -12,11 +12,11 @@ const ObjectId = require('mongodb').ObjectId;
 
 const quiz = {
   name: 'HTML Very Basic 15',
-  description: 'This is a quiz of HTML',
-  category: 'HTML',
-  difficulty: 1,
   version: 1,
   notes: '',
+  category: 'HTML',
+  description: 'This is a quiz of HTML',
+  difficulty: 1,
 };
 
 const questions = [
@@ -115,8 +115,9 @@ const formatQuestions = (questions, idQuiz) => {
       question, 
       {
         accepted: typeof question.accepted === 'boolean' ? question.accepted : true ,
-        nameQuiz: quiz.name,
+        library: true,
         idQuiz,
+        version: quiz.version,
         answers: question.answers.map(answer=>{
           return Object.assign({}, answer, {id: ObjectId()});
         }),
@@ -125,7 +126,6 @@ const formatQuestions = (questions, idQuiz) => {
         index,
         indexNext: (index + 1) === questions.length ? 0 : index + 1,
         timestampCreated: new Date(),
-        version: quiz.version,
       }
     );
   });
@@ -163,10 +163,10 @@ return runServer()
   .then(()=> {
     const formattedQuiz = Object.assign({}, quiz,
       {
+        library: true,
         total: questions.length,
         score: 0,
         indexCurrent: 0,
-        library: true,
       });
     console.log('formattedQuiz',formattedQuiz);
     return Quiz.create(formattedQuiz);

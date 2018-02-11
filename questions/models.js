@@ -6,6 +6,7 @@ mongoose.Promise = global.Promise;
 
 const QuestionSchema = mongoose.Schema({
   accepted:         { type: Boolean }, // accepted by Admin for inclusion
+  library:          { type: Boolean },
   idUser:           { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // each question belongs to 1 only user
   idQuiz:           { type: mongoose.Schema.Types.ObjectId, ref: 'Quiz' }, // each question belongs to 1 only quiz
   nameQuiz:         { type: String },

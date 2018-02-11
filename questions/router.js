@@ -15,6 +15,8 @@ const passport = require('passport');
 const jwt = require('jsonwebtoken');
 const jwtAuth = passport.authenticate('jwt', { session: false });
 
+const { validateKeysPresent, limitKeys, validateValuesSize, validateValuesTrimmed, validateTypes } = require('../helpers/helper');
+
 // @@@@@@@@@@@@ HELPERS @@@@@@@@@@@@@@@@
 
 const formatQuestionOptionIds = question => {
@@ -25,15 +27,85 @@ const formatQuestionOptionIds = question => {
   return correctJoin;
 };
 
+const validateAnswer = (answer, idQuestion) => {
+  const requiredKeys = [
+    'idUser',
+    'idQuiz', 
+    'choices',
+    'scoreIfTrue',
+    'scoreIfFalse',
+    'indexCurrent',
+    'scorePrior', 
+    'indexNextPrior', 
+    'indexInsertAfterIfTrue', 
+    'indexInsertAfterIfFalse',
+    'indexInsertBeforeIfTrue',
+    'indexInsertBeforeIfFalse' 
+  ];
+  const isPresent = validateKeysPresent(answer, requiredKeys);
+  if( isPresent !== 'ok') {
+    throw `Missing keys: ${JSON.stringify(isPresent)}`;
+  }
+  const stringKeys = [
+    'idUser',
+    'idQuiz', 
+  ];
+  const isString = validateTypes(answer, stringKeys, 'string');
+  if( isString !== 'ok') {
+    throw `Incorrect types:: ${JSON.stringify(isString)}`;
+  }
+  const numberKeys = [
+    'scoreIfTrue',
+    'scoreIfFalse',
+    'indexCurrent',
+    'scorePrior', 
+    'indexNextPrior', 
+    'indexInsertAfterIfTrue', 
+    'indexInsertAfterIfFalse',
+    'indexInsertBeforeIfTrue',
+    'indexInsertBeforeIfFalse' 
+  ];
+  const isNumber = validateTypes(answer, numberKeys, 'number');
+  if( isNumber !== 'ok') {
+    throw `Incorrect types:: ${JSON.stringify(isNumber)}`;
+  }
+  const arrayKeys = [ 'choices' ];
+  const isArrayy = validateKeysPresent(answer, arrayKeys);
+  if( isArrayy !== 'ok') {
+    throw `Incorrect types: ${JSON.stringify(isArrayy)}`;
+  }
+
+  if (answer.idQuestion !== idQuestion) {
+    throw 'Question is mis-identified.';
+  }
+};
+
+const validateQuestion = (question, idUser, idQuiz) => {
+  if(!question) {
+    throw 'Question not found!';
+  }
+  if(question.library){
+    throw 'Sorry, this question cannot be answered';
+  }
+  if(ObjectId(question.idUser).toString() !== idUser){
+    throw 'Sorry, this is not your question to answer';
+  }
+  if(ObjectId(question.idQuiz).toString() !== idQuiz){
+    throw 'Sorry, this question belongs to a quiz other than the quiz listed';
+  }
+};
+
 // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-// create put endpoint(s) to update quiz, including add comments (after MVP)
+// answer a question (submit a choice)
 router.put('/:idQuestion', jwtAuth, (req, res) => {
   
   const idQuestion = req.params.idQuestion;
   console.log('idQuestion', idQuestion);
+
+  validateAnswer(req.body, idQuestion); // no return value, just throws errors
+
   const { 
-    // idQuestion is in the body, and we should compare it, but we are officially using the req.param version
     idUser,
     idQuiz, 
     choices,
@@ -46,11 +118,11 @@ router.put('/:idQuestion', jwtAuth, (req, res) => {
     indexInsertAfterIfFalse,
     indexInsertBeforeIfTrue,
     indexInsertBeforeIfFalse 
-  } = req.body;
+  } = req.body; // not using limitKeys here, because it is more useful to split into multiple individual variables
   let correct = false;
   let scoreNew = scorePrior;
   let indexInsertAfter, indexInsertBefore;
-  let indexRedirect, indexNextNew, indexInsertAfterNext, indexRedirectNext, answers;
+  let indexRedirect, indexNextNew, indexInsertAfterNext, indexRedirectNext, answers, version;
   const formattedChoices = (choices).sort((a,b) => a-b).join(','); 
   console.log( 'idUser',idUser,
     'idQuiz', idQuiz,
@@ -69,6 +141,7 @@ router.put('/:idQuestion', jwtAuth, (req, res) => {
   // get the question by id from db, 
   return Question.findById(idQuestion)
     .then(currentQuestion=>{
+      validateQuestion(currentQuestion, idUser, idQuiz); // no return value, only throws errors
       console.log('currentQuestion',currentQuestion);
       
       // score the choice, set new score
@@ -121,7 +194,9 @@ router.put('/:idQuestion', jwtAuth, (req, res) => {
 
     // UPDATE INSERTAFTER POINTER
     .then(updatedQuestion=>{
+      version = updatedQuestion.version;
       console.log('updatedQuestion',updatedQuestion);
+
       return Question.update(
         {idQuiz: ObjectId(idQuiz),
           accepted: true,
@@ -134,7 +209,7 @@ router.put('/:idQuestion', jwtAuth, (req, res) => {
 
     // SAVE CHOICE FOR FUTURE USE
     .then(() =>{
-      return Choice.create({idUser, idQuiz, idQuestion, choices, correct, score: scoreNew}, {new: true});
+      return Choice.create({idUser, idQuiz, idQuestion, choices, correct, version, score: scoreNew}, {new: true});
     })
 
     // RESPONSE TO CLIENT

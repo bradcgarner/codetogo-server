@@ -1,6 +1,7 @@
 'use strict';
 // endpoint is /api/users/
 // index: helpers, post, put, get, delete
+const { validateKeysPresent, limitKeys, validateValuesSize, validateValuesTrimmed, validateTypes } = require('../helpers/helper');
 
 const express = require('express');
 const router = express.Router();
@@ -16,101 +17,29 @@ const jwtAuth = passport.authenticate('jwt', { session: false });
 
 // @@@@@@@@@@@ HELPERS @@@@@@@@@@@@@
 
-const validateUserFieldsPresent = user => {
+const validateUserFields = (user, type) => { // type = new or existing
   const requiredFields = ['username', 'password', 'firstName', 'lastName'];
-  const missingField = requiredFields.find(field => (!(field in user)));
-  if (missingField) {
-    const response = {
-      message: 'Missing field',
-      location: missingField
-    };
-    return response;
-  }
-  return 'ok';
-};
-
-const validateUserFieldsString = user => {
   const stringFields = ['username', 'password', 'firstName', 'lastName'];
-  const nonStringField = stringFields.find(
-    field => field in user && typeof user[field] !== 'string'
-  );
-  if (nonStringField) {
-    return {
-      message: 'Incorrect field type: expected string',
-      location: nonStringField
-    };
-  }
-  return 'ok';
-};  
-
-const validateUserFieldsTrimmed = user => {
   const explicityTrimmedFields = ['username', 'password'];
-  const nonTrimmedFields = [];
-  explicityTrimmedFields.forEach( field => {
-    if (user[field]) {
-      if (user[field].trim() !== user[field]) {
-        nonTrimmedFields.push(field);
-      }
-    }
-  });
-  if (nonTrimmedFields.length > 0) {
-    return {
-      message: 'Cannot start or end with whitespace',
-      location: nonTrimmedFields.join(', ')
-    };
-  }
-  return 'ok' ;
-};   
-
-const validateUserFieldsSize = user => {  
   const sizedFields = {
     username: { min: 1,  max: 99 },
     password: { min: 10, max: 72 }
   };
-  const tooSmallField = [];
-  const tooLargeField = [];
-
-  for(let prop in sizedFields) {
-    if (user[prop]) {
-      if (user[prop].length < sizedFields[prop].min) {
-        tooSmallField.push(`${prop} must be at least ${sizedFields[prop].min} characters.`);
-      } else if (user[prop].length > sizedFields[prop].max) {
-        tooLargeField.push(`${prop} cannot exceed ${sizedFields[prop].max} characters.`);
-      }
-    }
-  }
-
-  if (tooSmallField.length > 0 || tooLargeField.length > 0) {
-    const tooSmallMessage = tooSmallField.join(', ');
-    const tooLargeMessage = tooLargeField.join(', ');
-    return [tooSmallMessage, tooLargeMessage].join(', ');
-  }
-  return 'ok' ;
-};  
-
-const validateUserFields = (user, type) => { // type = new or existing
-  const isPresentt = type === 'new' ? validateUserFieldsPresent(user): 'ok';
-  const isStringg = validateUserFieldsString(user);
-  const isTrimmedd = validateUserFieldsTrimmed(user);
-  const isSize = validateUserFieldsSize(user);
+  const isPresentt = type === 'new' ? validateKeysPresent(user, requiredFields): 'ok';
+  const isStringg = validateTypes(user, stringFields, 'string');
+  const isTrimmedd = validateValuesTrimmed(user, explicityTrimmedFields);
+  const isSize = validateValuesSize(user, sizedFields);
   
-  if (isPresentt !== 'ok' && type === 'new') {
-    return isPresentt; 
-  } else if (isStringg !== 'ok') {
-    return isStringg;
-  } else if (isTrimmedd !== 'ok' ) {
-    return isTrimmedd;
-  } else if (isSize !== 'ok' ) {
-    return isSize;
-  } else {
-    return 'ok';
-  }
+  if (isPresentt !== 'ok' && type === 'new') return isPresentt; 
+  if (isStringg !== 'ok') return isStringg;
+  if (isTrimmedd !== 'ok' ) return isTrimmedd;
+  if (isSize !== 'ok' ) return isSize;
+  return 'ok';
+
 };
 
 function confirmUniqueUsername(username, type) {
-  if (!username && type !== 'new') {
-    return Promise.resolve();
-  }
+  if (!username && type !== 'new')  return Promise.resolve();
   return User.find({ username })
     .then(count => {
       const maxMatch = type === 'existingUser' ? 1 : 0 ;
@@ -120,9 +49,8 @@ function confirmUniqueUsername(username, type) {
           message: 'Username already taken',
           location: 'username'
         });
-      } else {
-        return Promise.resolve();
       }
+      return Promise.resolve();
     });
 }
 
@@ -135,18 +63,16 @@ router.post('/', jsonParser, (req, res) => {
   if (user !== 'ok') {
     user.reason = 'ValidationError';
     return res.status(422).json(user);
-  } else {
-    userValid = req.body;
   }
+  const allowedFields = ['username', 'password', 'lastName', 'firstName', 'email', 'avatar'];
+  userValid = limitKeys(req.body, allowedFields); // else of above
 
-  let { username, password, lastName, firstName, email, avatar } = userValid;
-
-  return confirmUniqueUsername(username, 'new')
+  return confirmUniqueUsername(userValid.username, 'new')
     .then(() => {
-      return User.hashPassword(password);
+      return User.hashPassword(userValid.password);
     })
     .then(hash => {
-      return User.create({ username, password: hash, lastName, firstName, email, avatar });
+      return User.create(userValid);
     })
     .then(user => {
       return res.status(201).json(user.apiRepr());
@@ -166,11 +92,8 @@ router.put('/:id', jsonParser, jwtAuth, (req, res) => {
     user.reason = 'ValidationError';
     return res.status(422).json(user);
   } 
-  const userValid = {};
   const allowedKeys = ['username', 'password', 'firstName', 'lastName', 'email', 'avatar'];
-  allowedKeys.forEach(key=>{
-    if(req.body[key]) userValid[key] = req.body[key];
-  });
+  const userValid = limitKeys(req.body, allowedKeys);
 
   return confirmUniqueUsername(userValid.username) // returns Promise.resolve or .reject
     .then(() => {
@@ -186,7 +109,7 @@ router.put('/:id', jsonParser, jwtAuth, (req, res) => {
         });
       }
       if (userValid.password) {
-        return User.hashPassword(req.body.password);
+        return User.hashPassword(userValid.password);
       } 
       return false;
     })
