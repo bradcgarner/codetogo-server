@@ -1,5 +1,6 @@
 'use strict';
 
-const {Badge} = require('./models');
+const { Badge } = require('./models');
+const { router } = require('./router');
 
-module.exports = {Badge};
+module.exports = {Badge, router};

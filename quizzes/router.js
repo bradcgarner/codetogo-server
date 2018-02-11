@@ -31,7 +31,7 @@ router.get('/:idQuiz', (req, res) => {
     })
     .then(questionsFound=>{
       const questions = questionsFound.map(question=>question.apiRepr()).sort((a,b)=>a.index-b.index);
-      const response = Object.assign({}, quiz, {questions: questions});
+      const response = Object.assign({}, {quiz: quiz, questions: questions});
       return res.status(200).json(response);
     })
     .catch(err => {
@@ -39,11 +39,35 @@ router.get('/:idQuiz', (req, res) => {
     });
 });
 
+router.put('/:idQuiz/reset', (req, res) => {
+  return Question.find({
+    idQuiz: ObjectId(req.params.idQuiz)
+  })
+    .then(questions=>{
+      const promiseArray = questions.map(question=>{
+        const id = ObjectId(question._id).toString();
+        return Question.findByIdAndUpdate(id, {
+          score: 2,
+          indexNext: question.index === questions.length -1 ? 0 : question.index + 1 ,
+        });
+      });
+      return Promise.all(promiseArray);
+    })
+    .then(()=>{
+      res.sendStatus(204);
+    })
+    .catch(err=>{
+      console.log('error', err);
+    });
+});
+
+
 // access quiz [from library] by id; get all questions; copy quiz to user; copy questions to user's quiz
 router.put('/:idQuiz/users/:idUser', (req, res) => {
   console.log('req.params.idQuiz',req.params.idQuiz);
 
   // verify quiz with name and idUser doesn't already exist
+  console.log('verify quiz with name and idUser doesn\'t already exist');
 
   let quizLibrary, quizUser, idQuizUser;
 
@@ -80,7 +104,7 @@ router.put('/:idQuiz/users/:idUser', (req, res) => {
       });
     })
     .then(quizCreated=>{
-      quizUser = quizCreated[0];
+      quizUser = quizCreated[0].apiRepr;
       console.log('quizUser',quizUser);
       console.log('quizUser.idUser',quizUser.idUser);
       console.log('typeof',typeof quizUser.idUser);
@@ -144,19 +168,7 @@ router.put('/:idQuiz/users/:idUser', (req, res) => {
       if (ObjectId(questions[0].idQuiz).toString() !== idQuizUser){
         throw 'Questions not successfully copied to user';
       }
-      const response = {
-        name: quizUser.name,
-        version: quizUser.version,
-        notes: quizUser.notes,
-        description: quizUser.description,
-        category: quizUser.category,
-        difficulty: quizUser.difficulty,
-        total: quizUser.total,
-        idUser: quizUser.idUser,
-        score: quizUser.score,
-        indexCurrent: quizUser.indexCurrent,
-        questions: questions,
-      };
+      const response = { quiz: quizUser, questions: questions };
       return res.status(200).json(response);
     })
     .catch(err => {

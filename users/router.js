@@ -139,14 +139,14 @@ router.post('/', jsonParser, (req, res) => {
     userValid = req.body;
   }
 
-  let { username, password, lastName, firstName, email } = userValid;
+  let { username, password, lastName, firstName, email, avatar } = userValid;
 
   return confirmUniqueUsername(username, 'new')
     .then(() => {
       return User.hashPassword(password);
     })
     .then(hash => {
-      return User.create({ username, password: hash, lastName, firstName, email });
+      return User.create({ username, password: hash, lastName, firstName, email, avatar });
     })
     .then(user => {
       return res.status(201).json(user.apiRepr());
@@ -162,13 +162,17 @@ router.post('/', jsonParser, (req, res) => {
 // update a user profile
 router.put('/:id', jsonParser, jwtAuth, (req, res) => {
   const user = validateUserFields(req.body);
-  let userValid;
   if (user !== 'ok') {
     user.reason = 'ValidationError';
     return res.status(422).json(user);
-  } else {
-    userValid = req.body;
-  }
+  } 
+  const userValid = {
+    username: req.body.username,
+    firstName: req.body.firstName,
+    lastName: req.body.lastName,
+    email:req.body.email,
+    avatar: req.body.avatar,
+  };
 
   return confirmUniqueUsername(userValid.username) // returns Promise.resolve or .reject
     .then(() => {
@@ -184,16 +188,12 @@ router.put('/:id', jsonParser, jwtAuth, (req, res) => {
         });
       }
       if (userValid.password) {
-        return User.hashPassword(userValid.password);
+        return User.hashPassword(req.body.password);
       } 
       return false;
     })
     .then(hash => {
-      if (hash) {
-        userValid.password = hash;
-      }
-    })
-    .then(() => {
+      if (hash) userValid.password = hash;
       return User.findByIdAndUpdate(req.params.id,
         { $set: userValid },
         { new: true },

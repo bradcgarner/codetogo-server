@@ -17,11 +17,6 @@ const jwtAuth = passport.authenticate('jwt', { session: false });
 
 // @@@@@@@@@@@@ HELPERS @@@@@@@@@@@@@@@@
 
-const setScore = (scorePrior, correct, multIfTrue, multIfFalse) => {
-  if (correct) return scorePrior * multIfTrue;
-  return Math.ceil(scorePrior * multIfFalse);
-};
-
 const formatQuestionOptionIds = question => {
   let correct = question.answers.filter(answer => answer.correct);
   let correctId = correct.map(answer=>ObjectId(answer.id).toString());
@@ -38,12 +33,12 @@ router.put('/:idQuestion', jwtAuth, (req, res) => {
   const idQuestion = req.params.idQuestion;
   console.log('idQuestion', idQuestion);
   const { 
+    // idQuestion is in the body, and we should compare it, but we are officially using the req.param version
     idUser,
     idQuiz, 
-    // nameQuiz,
     choices,
-    multIfTrue,
-    multIfFalse,
+    scoreIfTrue,
+    scoreIfFalse,
     indexCurrent,
     scorePrior, 
     indexNextPrior, 
@@ -59,10 +54,9 @@ router.put('/:idQuestion', jwtAuth, (req, res) => {
   const formattedChoices = (choices).sort((a,b) => a-b).join(','); 
   console.log( 'idUser',idUser,
     'idQuiz', idQuiz,
-    // 'nameQuiz',nameQuiz,
     'choices',choices,
-    'multIfTrue',multIfTrue,
-    'multIfFalse',multIfFalse,
+    'scoreIfTrue',scoreIfTrue,
+    'scoreIfFalse',scoreIfFalse,
     'indexCurrent',indexCurrent,
     'scorePrior', scorePrior,
     'indexNextPrior', indexNextPrior,
@@ -82,7 +76,7 @@ router.put('/:idQuestion', jwtAuth, (req, res) => {
       console.log('formattedCorrectAnswers',formattedCorrectAnswers);
       correct = formattedCorrectAnswers === formattedChoices;   // compare, return true or false, hoist
       console.log('correct',correct);
-      scoreNew = setScore(scorePrior, correct, multIfTrue, multIfFalse);
+      scoreNew = correct ? scoreIfTrue : scoreIfFalse;
       console.log('scoreNew',scoreNew);
       answers = currentQuestion.answers;
       console.log('answers',answers);
@@ -140,7 +134,7 @@ router.put('/:idQuestion', jwtAuth, (req, res) => {
 
     // SAVE CHOICE FOR FUTURE USE
     .then(() =>{
-      return Choice.create({idUser, idQuiz, idQuestion, choices, correct }, {new: true});
+      return Choice.create({idUser, idQuiz, idQuestion, choices, correct, score: scoreNew}, {new: true});
     })
 
     // RESPONSE TO CLIENT

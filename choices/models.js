@@ -10,7 +10,8 @@ const ChoiceSchema = mongoose.Schema({
   idQuestion:       { type: mongoose.Schema.Types.ObjectId, ref: 'Question' },
   version:          { type: Number },
   choices:        [ { type: String } ], // for multiple choice: array of ids of the user's answer (choice), for field just a string
-  correct:          {type: Boolean },
+  correct:          { type: Boolean },
+  score:            { type: Number },
   timestampCreated: { type: String }, // created by User
 });
 
