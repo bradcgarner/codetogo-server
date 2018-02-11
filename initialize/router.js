@@ -4,7 +4,7 @@ const express = require('express');
 const router = express.Router();
 const { Quiz } = require('../quizzes');
 
-router.get('/initialize', (req, res) => {
+router.get('/', (req, res) => {
   return Quiz.find({library: true})
     .then(quizzes => {
       const quizzesArray = quizzes.map(quiz => quiz.initializeRepr());

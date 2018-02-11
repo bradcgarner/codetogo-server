@@ -18,12 +18,14 @@ const jwtAuth = passport.authenticate('jwt', { session: false });
 // @@@@@@@@@@@ ENDPOINTS @@@@@@@@@@@@@
 
 // access quiz by id; get all questions
-router.get('/:idQuiz', (req, res) => {
+router.get('/:idQuiz/users/:idUser', (req, res) => {
   let quiz;
   return Quiz.findById(req.params.idQuiz)
     .then(quizFound => {
       quiz = quizFound.apiRepr();
-
+      if(quiz.idUser !== req.params.idUser){
+        throw 'Sorry, but this quiz does not seem to belong to this user';
+      }
       return Question.find({
         accepted: true,
         idQuiz: ObjectId(req.params.idQuiz)

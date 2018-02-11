@@ -10,7 +10,7 @@ mongoose.Promise = global.Promise;
 const { router: userRouter } = require('./users');
 const { router: quizRouter } = require('./quizzes');
 const { router: questionRouter } = require('./questions');
-const { router: adminRouter } = require('./admin');
+const { router: initializeRouter } = require('./initialize');
 const { router: activityRouter } = require('./activity');
 const { router: badgeRouter } = require('./badges');
 const { router: authRouter, localStrategy, jwtStrategy } = require('./auth');
@@ -35,7 +35,7 @@ app.use(express.static('public'));
 //   res.sendFile(__dirname + '/views/index.html');
 // });
 
-app.use('/api/admin/', adminRouter);
+app.use('/api/initialize/', initializeRouter);
 app.use('/api/auth/', authRouter);
 app.use('/api/users', userRouter);
 app.use('/api/quizzes', quizRouter);
