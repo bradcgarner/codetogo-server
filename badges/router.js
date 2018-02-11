@@ -25,7 +25,7 @@ router.post('/', jwtAuth, (req, res) => {
   };
   return Badge.create(badge, {new: true})
     .then(badgeCreated=>{
-      res.status(200).json(badgeCreated);
+      res.status(200).json(badgeCreated.apiRepr());
     })
     .catch(err => {
       res.status(500).json({ message: `Internal server error ${err}` });

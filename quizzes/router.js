@@ -65,23 +65,46 @@ router.put('/:idQuiz/reset', (req, res) => {
 // access quiz [from library] by id; get all questions; copy quiz to user; copy questions to user's quiz
 router.put('/:idQuiz/users/:idUser', (req, res) => {
   console.log('req.params.idQuiz',req.params.idQuiz);
+  let quizLibrary, quizUser, idQuizUser, existingQuizFound;
 
   // verify quiz with name and idUser doesn't already exist
-  console.log('verify quiz with name and idUser doesn\'t already exist');
-
-  let quizLibrary, quizUser, idQuizUser;
-
-  // find quiz in library
-  return Quiz.findById(req.params.idQuiz)
+  return Quiz.find({
+    idUser: ObjectId(req.params.idUser),
+    idOrigin: ObjectId(req.params.idQuiz)
+  })
+    .then(existingQuizzesFound=>{
+      if (Array.isArray(existingQuizzesFound)){
+        if(existingQuizzesFound.length > 0) {
+          const existingQuizzes = existingQuizzesFound.map(quiz=>{
+            return { id: quiz._id, version: quiz.version};
+          }).sort((a,b)=>b.version-a.version);
+          return existingQuizzes[0];
+        }
+      }
+      return {id: null, version: null};
+    })
+    .then(mostRecentExistingQuizFound=>{
+      existingQuizFound = mostRecentExistingQuizFound;
+      console.log('existingQuizFound',existingQuizFound);
+      // find quiz in library
+      return Quiz.findById(req.params.idQuiz);
+    })
     .then(quizFound => {
       console.log('quizFound',quizFound);
       if (ObjectId(quizFound._id).toString() !== req.params.idQuiz){
         throw 'Quiz not found!';
       }
+      if (!(quizFound.library)){
+        throw 'Quiz cannot be copied!';
+      }
+      if (quizFound.version === existingQuizFound.version){
+        throw 'Quiz not copied, already exists!';
+      }
       quizLibrary = quizFound;
 
       // copy quiz to user... damn Mongo doesn't allow Object.assign
       const quizToCreate = {
+        idOrigin: ObjectId(req.params.idQuiz),
         name: quizFound.name,
         version: quizFound.version,
         notes: quizFound.notes,
@@ -94,7 +117,7 @@ router.put('/:idQuiz/users/:idUser', (req, res) => {
         indexCurrent: 0,
         library: false,
       };
-      console.log('quizToCreate',quizToCreate);
+      // console.log('quizToCreate',quizToCreate);
       return Quiz.create(quizToCreate);
     })
     .then(()=>{
@@ -104,10 +127,10 @@ router.put('/:idQuiz/users/:idUser', (req, res) => {
       });
     })
     .then(quizCreated=>{
-      quizUser = quizCreated[0].apiRepr;
-      console.log('quizUser',quizUser);
-      console.log('quizUser.idUser',quizUser.idUser);
-      console.log('typeof',typeof quizUser.idUser);
+      quizUser = quizCreated[0].apiRepr();
+      // console.log('quizUser',quizUser);
+      // console.log('quizUser.idUser',quizUser.idUser);
+      // console.log('typeof',typeof quizUser.idUser);
       if (ObjectId(quizUser.idUser).toString() !== req.params.idUser){
         throw 'Quiz not successfully copied to user!';
       }
@@ -118,13 +141,13 @@ router.put('/:idQuiz/users/:idUser', (req, res) => {
         idQuiz: ObjectId(req.params.idQuiz)
       });
     }).then(questionsFound=>{
-      console.log('questionsFound[0]',questionsFound.length, questionsFound[0]);
+      // console.log('questionsFound[0]',questionsFound.length, questionsFound[0]);
       if (ObjectId(questionsFound[0].idQuiz).toString() !== ObjectId(quizLibrary._id).toString()){
         throw 'Questions not found';
       }
       // copy questions to user
-      console.log('quizUser._id',quizUser._id);
-      console.log('typeof ',typeof quizUser._id);
+      // console.log('quizUser._id',quizUser._id);
+      // console.log('typeof ',typeof quizUser._id);
       idQuizUser = ObjectId(quizUser._id).toString();
 
       const questionsUser = questionsFound.map(question=>{
@@ -153,8 +176,8 @@ router.put('/:idQuiz/users/:idUser', (req, res) => {
       // Mongo makes us find the questions ourselves... damn Mongo!
     }).then(()=>{
 
-      console.log('idQuizUser',idQuizUser);
-      console.log('typeof ',typeof idQuizUser);
+      // console.log('idQuizUser',idQuizUser);
+      // console.log('typeof ',typeof idQuizUser);
       return Question.find({
         accepted: true,
         idQuiz: ObjectId(idQuizUser)
@@ -163,7 +186,7 @@ router.put('/:idQuiz/users/:idUser', (req, res) => {
       // respond
     }).then(rawQuestions=>{
       const questions = rawQuestions.map(question=>question.apiRepr()).sort((a,b)=>a.index-b.index);
-      console.log('questions[0]',questions[0]);
+      // console.log('questions[0]',questions[0]);
 
       if (ObjectId(questions[0].idQuiz).toString() !== idQuizUser){
         throw 'Questions not successfully copied to user';

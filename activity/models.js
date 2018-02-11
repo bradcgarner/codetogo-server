@@ -16,7 +16,7 @@ ActivitySchema.methods.apiRepr = function () {
   return { 
     id: this._id,
     idUser: this.idUser,
-    actions: this.actions,
+    action: this.action,
     name: this.name,
     category: this.category,
     timestampCreated: this.timestampCreated,

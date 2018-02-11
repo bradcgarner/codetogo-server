@@ -166,13 +166,11 @@ router.put('/:id', jsonParser, jwtAuth, (req, res) => {
     user.reason = 'ValidationError';
     return res.status(422).json(user);
   } 
-  const userValid = {
-    username: req.body.username,
-    firstName: req.body.firstName,
-    lastName: req.body.lastName,
-    email:req.body.email,
-    avatar: req.body.avatar,
-  };
+  const userValid = {};
+  const allowedKeys = ['username', 'password', 'firstName', 'lastName', 'email', 'avatar'];
+  allowedKeys.forEach(key=>{
+    if(req.body[key]) userValid[key] = req.body[key];
+  });
 
   return confirmUniqueUsername(userValid.username) // returns Promise.resolve or .reject
     .then(() => {

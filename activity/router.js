@@ -17,14 +17,14 @@ router.post('/', jwtAuth, (req, res) => {
   
   const activity = {
     idUser: req.body.idUser,
-    actions: req.body.actions,
+    action: req.body.action,
     name: req.body.name,
     category: req.body.category,
     timestampCreated: new Date()
   };
   return Activity.create(activity, {new: true})
     .then(activityCreated=>{
-      res.status(200).json(activityCreated);
+      res.status(200).json(activityCreated.apiRepr());
     })
     .catch(err => {
       res.status(500).json({ message: `Internal server error ${err}` });

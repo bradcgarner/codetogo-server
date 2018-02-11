@@ -16,17 +16,18 @@ mongoose.Promise = global.Promise;
 // values, such as indexCurrent and score become unique to the user
 
 const QuizSchema = mongoose.Schema({
-  idUser: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // we'll set library to 0
-  name: { type: String },
-  category: { type: String }, // HTML, CSS, JS
-  difficulty: { type: Number }, // scale of 1 easy 5 advanced
-  description: { type: String }, // timeless subject matter description (see notes for versioning separately)
-  total: { type: Number }, // total number of questions, populated via script
-  score: { type: Number }, // default to 0 by script
+  idOrigin:     { type: mongoose.Schema.Types.ObjectId, ref: 'Quiz' },
+  idUser:       { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // we'll set library to 0
+  name:         { type: String },
+  category:     { type: String }, // HTML, CSS, JS
+  difficulty:   { type: Number }, // scale of 1 easy 5 advanced
+  description:  { type: String }, // timeless subject matter description (see notes for versioning separately)
+  total:        { type: Number }, // total number of questions, populated via script
+  score:        { type: Number }, // default to 0 by script
   indexCurrent: { type: Number }, // default to 0 by script
-  library: { type: Boolean },
-  version: { type: Number },
-  notes: { type: String }, // notes about this version
+  library:      { type: Boolean },
+  version:      { type: Number },
+  notes:        { type: String }, // notes about this version
 });
 
 QuizSchema.methods.apiRepr = function () {
@@ -34,14 +35,14 @@ QuizSchema.methods.apiRepr = function () {
     id: this._id,
     idUser: this.idUser,
     name: this.name,
+    version: this.version,
+    notes: this.notes,
     category: this.category,
     difficulty: this.difficulty,
     description: this.description,
     total: this.total,
     score: this.score,
     indexCurrent: this.indexCurrent,
-    version: this.version,
-    notes: this.notes,
   };
 };
 

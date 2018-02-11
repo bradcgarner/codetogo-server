@@ -50,7 +50,7 @@ router.post('/login', localAuth, (req, res) => {
       return Quiz.find({idUser: user.id});
     })
     .then(userQuizzesFound=>{
-      quizList = userQuizzesFound;
+      quizList = userQuizzesFound.map(quiz=>quiz.apiRepr());
     })
     // find badges
     .then(()=>{
