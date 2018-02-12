@@ -31,7 +31,6 @@ const jwtAuth = passport.authenticate('jwt', { session: false });
 
 
 router.post('/login', localAuth, (req, res) => {
-  console.log(req.body);
   
   let userFromClient = req.body;
   let user, quizList, badges, activity;

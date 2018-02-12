@@ -12,8 +12,8 @@ const bodyParser = require('body-parser');
 const jsonParser = bodyParser.json();
 router.use(jsonParser);
 const passport = require('passport');
-const jwt = require('jsonwebtoken');
-const jwtAuth = passport.authenticate('jwt', { session: false });
+// const jwt = require('jsonwebtoken');
+// const jwtAuth = passport.authenticate('jwt', { session: false });
 
 // @@@@@@@@@@@ ENDPOINTS @@@@@@@@@@@@@
 
@@ -44,7 +44,6 @@ router.get('/:idQuiz/users/:idUser', (req, res) => {
 
 // access quiz [from library] by id; get all questions; copy quiz to user; copy questions to user's quiz
 router.put('/:idQuiz/users/:idUser', (req, res) => {
-  console.log('req.params.idQuiz',req.params.idQuiz);
   let quizLibrary, quizUser, idQuizUser, idQuizUserString, existingQuizFound;
 
   // verify quiz with name and idUser doesn't already exist
@@ -65,12 +64,10 @@ router.put('/:idQuiz/users/:idUser', (req, res) => {
     })
     .then(mostRecentExistingQuizFound=>{
       existingQuizFound = mostRecentExistingQuizFound;
-      console.log('existingQuizFound',existingQuizFound);
       // find quiz in library
       return Quiz.findById(req.params.idQuiz);
     })
     .then(quizFound => {
-      console.log('quizFound',quizFound);
       if (ObjectId(quizFound._id).toString() !== req.params.idQuiz){
         throw 'Quiz not found!';
       }
@@ -97,20 +94,18 @@ router.put('/:idQuiz/users/:idUser', (req, res) => {
         score: 0,
         indexCurrent: 0,
       };
-      // console.log('quizToCreate',quizToCreate);
       return Quiz.create(quizToCreate);
     })
     .then(()=>{
-      return Quiz.find({
+      return Quiz.findOne({
         name: quizLibrary.name,
         idUser: ObjectId(req.params.idUser)
       });
     })
-    .then(quizCreated=>{
-      quizUser = quizCreated[0].apiRepr();
-      // console.log('quizUser',quizUser);
-      // console.log('quizUser.idUser',quizUser.idUser);
-      // console.log('typeof',typeof quizUser.idUser);
+    .then(quizFoundInLibrary=>{
+      quizUser = quizFoundInLibrary.apiRepr();
+      idQuizUserString = ObjectId(quizUser.id).toString();
+
       if (ObjectId(quizUser.idUser).toString() !== req.params.idUser){
         throw 'Quiz not successfully copied to user!';
       }
@@ -121,16 +116,9 @@ router.put('/:idQuiz/users/:idUser', (req, res) => {
         idQuiz: ObjectId(req.params.idQuiz)
       });
     }).then(questionsFound=>{
-      // console.log('questionsFound[0]',questionsFound.length, questionsFound[0]);
       if (ObjectId(questionsFound[0].idQuiz).toString() !== ObjectId(quizLibrary._id).toString()){
         throw 'Questions not found';
       }
-      // copy questions to user
-      // console.log('quizUser._id',quizUser._id);
-      // console.log('typeof ',typeof quizUser._id);
-      idQuizUserString = ObjectId(quizUser._id).toString();
-      console.log('idQuizUserString',typeof idQuizUserString,idQuizUserString);
-      idQuizUser = quizUser._id;
 
       const questionsUser = questionsFound.map(question=>{
         return {
@@ -153,15 +141,10 @@ router.put('/:idQuiz/users/:idUser', (req, res) => {
           timestampUpdated: new Date(),
         };
       });
-      console.log('questionsUser[0]',questionsUser[0]);
-      console.log('questionsUser[0].idQuiz',typeof questionsUser[0].idQuiz, questionsUser[0].idQuiz);
       return Question.insertMany(questionsUser);
 
       // Mongo makes us find the questions ourselves... damn Mongo!
     }).then(()=>{
-
-      // console.log('idQuizUser',idQuizUser);
-      // console.log('typeof ',typeof idQuizUser);
       return Question.find({
         accepted: true,
         idQuiz: ObjectId(idQuizUserString)
@@ -170,7 +153,6 @@ router.put('/:idQuiz/users/:idUser', (req, res) => {
       // respond
     }).then(rawQuestions=>{
       const questions = rawQuestions.map(question=>question.apiRepr()).sort((a,b)=>a.index-b.index);
-      // console.log('questions[0]',questions[0]);
 
       if (ObjectId(questions[0].idQuiz).toString() !== idQuizUserString){
         throw 'Questions not successfully copied to user';
