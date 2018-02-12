@@ -12,7 +12,7 @@ const bodyParser = require('body-parser');
 const jsonParser = bodyParser.json();
 router.use(jsonParser);
 const passport = require('passport');
-const jwt = require('jsonwebtoken');
+// const jwt = require('jsonwebtoken');
 const jwtAuth = passport.authenticate('jwt', { session: false });
 
 // @@@@@@@@@@@ HELPERS @@@@@@@@@@@@@

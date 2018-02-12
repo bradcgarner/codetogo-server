@@ -5,6 +5,7 @@ const express = require('express');
 const router = express.Router();
 
 const { Question } = require('./models');
+const { Quiz } = require('../quizzes/models');
 const { Choice } = require('../choices/models');
 const { ObjectId } = require('mongodb').ObjectId;
 
@@ -179,8 +180,7 @@ router.put('/:idQuestion', jwtAuth, (req, res) => {
         {idQuiz: ObjectId(idQuiz),
           accepted: true,
           index: indexRedirect},
-        {$set: {
-          indexNext: indexRedirectNext}}
+        {$set: {indexNext: indexRedirectNext}}
       );
     })
 
@@ -207,10 +207,27 @@ router.put('/:idQuestion', jwtAuth, (req, res) => {
       );
     })
 
+  // UPDATE QUIZ CURRENT INDEX
+    .then(()=>{
+      console.log('questionupdated');
+      console.log('Quiz', Quiz);
+      console.log('Quiz', 'id', idQuiz, typeof idQuiz, 'indexNextPrior', indexNextPrior);
+      return Quiz.findById(idQuiz);
+    })
+    // UPDATE QUIZ CURRENT INDEX
+    .then(quizFound=>{
+      console.log('Quiz found', quizFound);
+      return Quiz.findByIdAndUpdate(idQuiz,
+        { $set: {indexCurrent: indexNextPrior}},
+        {new: true});
+    })
+
     // SAVE CHOICE FOR FUTURE USE
     .then(() =>{
+      console.log('quizupdated');
       return Choice.create({idUser, idQuiz, idQuestion, choices, correct, version, score: scoreNew}, {new: true});
     })
+
 
     // RESPONSE TO CLIENT
     .then(choiceCreated => {
