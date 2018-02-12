@@ -20,10 +20,11 @@ const jwtAuth = passport.authenticate('jwt', { session: false });
 // access quiz by id; get all questions
 router.get('/:idQuiz/users/:idUser', (req, res) => {
   let quiz;
+
   return Quiz.findById(req.params.idQuiz)
     .then(quizFound => {
       quiz = quizFound.apiRepr();
-      if(quiz.idUser !== req.params.idUser){
+      if(ObjectId(quiz.idUser).toString() !== req.params.idUser){
         throw 'Sorry, but this quiz does not seem to belong to this user';
       }
       return Question.find({
@@ -41,33 +42,10 @@ router.get('/:idQuiz/users/:idUser', (req, res) => {
     });
 });
 
-router.put('/:idQuiz/reset', (req, res) => {
-  return Question.find({
-    idQuiz: ObjectId(req.params.idQuiz)
-  })
-    .then(questions=>{
-      const promiseArray = questions.map(question=>{
-        const id = ObjectId(question._id).toString();
-        return Question.findByIdAndUpdate(id, {
-          score: 2,
-          indexNext: question.index === questions.length -1 ? 0 : question.index + 1 ,
-        });
-      });
-      return Promise.all(promiseArray);
-    })
-    .then(()=>{
-      res.sendStatus(204);
-    })
-    .catch(err=>{
-      console.log('error', err);
-    });
-});
-
-
 // access quiz [from library] by id; get all questions; copy quiz to user; copy questions to user's quiz
 router.put('/:idQuiz/users/:idUser', (req, res) => {
   console.log('req.params.idQuiz',req.params.idQuiz);
-  let quizLibrary, quizUser, idQuizUser, existingQuizFound;
+  let quizLibrary, quizUser, idQuizUser, idQuizUserString, existingQuizFound;
 
   // verify quiz with name and idUser doesn't already exist
   return Quiz.find({
@@ -150,13 +128,15 @@ router.put('/:idQuiz/users/:idUser', (req, res) => {
       // copy questions to user
       // console.log('quizUser._id',quizUser._id);
       // console.log('typeof ',typeof quizUser._id);
-      idQuizUser = ObjectId(quizUser._id).toString();
+      idQuizUserString = ObjectId(quizUser._id).toString();
+      console.log('idQuizUserString',typeof idQuizUserString,idQuizUserString);
+      idQuizUser = quizUser._id;
 
       const questionsUser = questionsFound.map(question=>{
         return {
           accepted: true,
           idUser: ObjectId(req.params.idUser),
-          idQuiz: ObjectId(idQuizUser),
+          idQuiz: ObjectId(idQuizUserString),
           nameQuiz: question.name,
           version: question.version,
           question: question.question,
@@ -173,6 +153,8 @@ router.put('/:idQuiz/users/:idUser', (req, res) => {
           timestampUpdated: new Date(),
         };
       });
+      console.log('questionsUser[0]',questionsUser[0]);
+      console.log('questionsUser[0].idQuiz',typeof questionsUser[0].idQuiz, questionsUser[0].idQuiz);
       return Question.insertMany(questionsUser);
 
       // Mongo makes us find the questions ourselves... damn Mongo!
@@ -182,7 +164,7 @@ router.put('/:idQuiz/users/:idUser', (req, res) => {
       // console.log('typeof ',typeof idQuizUser);
       return Question.find({
         accepted: true,
-        idQuiz: ObjectId(idQuizUser)
+        idQuiz: ObjectId(idQuizUserString)
       });
 
       // respond
@@ -190,7 +172,7 @@ router.put('/:idQuiz/users/:idUser', (req, res) => {
       const questions = rawQuestions.map(question=>question.apiRepr()).sort((a,b)=>a.index-b.index);
       // console.log('questions[0]',questions[0]);
 
-      if (ObjectId(questions[0].idQuiz).toString() !== idQuizUser){
+      if (ObjectId(questions[0].idQuiz).toString() !== idQuizUserString){
         throw 'Questions not successfully copied to user';
       }
       const response = { quiz: quizUser, questions: questions };
@@ -198,6 +180,28 @@ router.put('/:idQuiz/users/:idUser', (req, res) => {
     })
     .catch(err => {
       res.status(500).json({ code: 500, message: `Internal server error ${err}` });
+    });
+});
+
+router.put('/:idQuiz/reset', (req, res) => {
+  return Question.find({
+    idQuiz: ObjectId(req.params.idQuiz)
+  })
+    .then(questions=>{
+      const promiseArray = questions.map(question=>{
+        const id = ObjectId(question._id).toString();
+        return Question.findByIdAndUpdate(id, {
+          score: 2,
+          indexNext: question.index === questions.length -1 ? 0 : question.index + 1 ,
+        });
+      });
+      return Promise.all(promiseArray);
+    })
+    .then(()=>{
+      res.sendStatus(204);
+    })
+    .catch(err=>{
+      console.log('error', err);
     });
 });
 
