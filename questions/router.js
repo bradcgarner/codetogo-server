@@ -123,7 +123,7 @@ router.put('/:idQuestion', jwtAuth, (req, res) => {
   let correct = false;
   let scoreNew = scorePrior;
   let indexInsertAfter, indexInsertBefore;
-  let indexRedirect, indexNextNew, indexInsertAfterNext, indexRedirectNext, answers, version;
+  let indexRedirect, indexNextNew, indexRedirectNext, answers, version;
   const formattedChoices = (choices).sort((a,b) => a-b).join(','); 
   console.log( 'idUser',idUser,
     'idQuiz', idQuiz,
@@ -160,8 +160,6 @@ router.put('/:idQuestion', jwtAuth, (req, res) => {
       console.log('indexInsertBefore',indexInsertBefore);
       indexNextNew = indexInsertBefore;
       console.log('indexNextNew',indexNextNew);
-      indexInsertAfterNext = indexCurrent;
-      console.log('indexInsertAfterNext',indexInsertAfterNext);
 
       // FIND REDIRECT (WHAT POINTS TO CURRENT QUESTION NOW)
       return Question.find(
@@ -202,7 +200,7 @@ router.put('/:idQuestion', jwtAuth, (req, res) => {
           accepted: true,
           index: indexInsertAfter},
         {$set: {
-          indexNext: indexInsertAfterNext
+          indexNext: indexCurrent
         }}
       );
     })
@@ -240,7 +238,6 @@ router.put('/:idQuestion', jwtAuth, (req, res) => {
         indexRedirect,
         scoreNew,
         indexNextNew,
-        indexInsertAfterNext, 
         indexRedirectNext,
       };
       console.log('response',response);
