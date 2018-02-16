@@ -13,7 +13,7 @@ const bodyParser = require('body-parser');
 const jsonParser = bodyParser.json();
 router.use(jsonParser);
 const passport = require('passport');
-const jwt = require('jsonwebtoken');
+// const jwt = require('jsonwebtoken');
 const jwtAuth = passport.authenticate('jwt', { session: false });
 
 const { validateKeysPresent, limitKeys, validateValuesSize, validateValuesTrimmed, validateTypes } = require('../helpers/helper');
@@ -122,8 +122,7 @@ router.put('/:idQuestion', jwtAuth, (req, res) => {
   } = req.body; // not using limitKeys here, because it is more useful to split into multiple individual variables
   let correct = false;
   let scoreNew = scorePrior;
-  let indexInsertAfter, indexInsertBefore;
-  let indexRedirect, indexNextNew, indexRedirectNext, answers, version;
+  let indexInsertAfter, indexRedirect, indexNextNew, indexRedirectNext, answers, version;
   const formattedChoices = (choices).sort((a,b) => a-b).join(','); 
   console.log( 'idUser',idUser,
     'idQuiz', idQuiz,
@@ -146,7 +145,7 @@ router.put('/:idQuestion', jwtAuth, (req, res) => {
       console.log('currentQuestion',currentQuestion);
       
       // score the choice, set new score
-      const formattedCorrectAnswers = formatQuestionOptionIds(currentQuestion);     // format answers as a sorted string
+      const formattedCorrectAnswers = currentQuestion.typeAnswer === 'text' ? currentQuestion.answers.join('') : formatQuestionOptionIds(currentQuestion);     // format answers as a sorted string
       console.log('formattedCorrectAnswers',formattedCorrectAnswers);
       correct = formattedCorrectAnswers === formattedChoices;   // compare, return true or false, hoist
       console.log('correct',correct);
@@ -156,9 +155,7 @@ router.put('/:idQuestion', jwtAuth, (req, res) => {
       console.log('answers',answers);
       indexInsertAfter = correct ? indexInsertAfterIfTrue : indexInsertAfterIfFalse;
       console.log('indexInsertAfter',indexInsertAfter);
-      indexInsertBefore = correct ? indexInsertBeforeIfTrue : indexInsertBeforeIfFalse;
-      console.log('indexInsertBefore',indexInsertBefore);
-      indexNextNew = indexInsertBefore;
+      indexNextNew = correct ? indexInsertBeforeIfTrue : indexInsertBeforeIfFalse;
       console.log('indexNextNew',indexNextNew);
 
       // FIND REDIRECT (WHAT POINTS TO CURRENT QUESTION NOW)
@@ -204,9 +201,17 @@ router.put('/:idQuestion', jwtAuth, (req, res) => {
         }}
       );
     })
+    .then(()=>{
+      return Question.find(
+        {idQuiz: ObjectId(idQuiz),
+          accepted: true,
+          index: indexInsertAfter})
+    })
+
 
   // UPDATE QUIZ CURRENT INDEX
-    .then(()=>{
+    .then(questionInsertAfter=>{
+      console.log('question insert after updated', questionInsertAfter);
       console.log('questionupdated');
       console.log('Quiz', Quiz);
       console.log('Quiz', 'id', idQuiz, typeof idQuiz, 'indexNextPrior', indexNextPrior);
@@ -233,7 +238,7 @@ router.put('/:idQuestion', jwtAuth, (req, res) => {
       const response = {
         answers,
         correct,
-        indexInsertBefore,
+        indexCurrent,
         indexInsertAfter,
         indexRedirect,
         scoreNew,
