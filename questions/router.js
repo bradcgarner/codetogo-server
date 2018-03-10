@@ -107,22 +107,33 @@ router.put('/:idQuestion', jwtAuth, (req, res) => {
   validateAnswer(req.body, idQuestion); // no return value, just throws errors
 
   const { 
+    // idQuestion, in body, but not using, since we are using req.params
     idUser,
     idQuiz, 
-    choices,
-    scoreIfTrue,
-    scoreIfFalse,
     indexCurrent,
     scorePrior, 
-    indexNextPrior, 
+    indexNextPrior,
+    scoreIfTrue,
+    // positionsIfTrue,
     indexInsertAfterIfTrue, 
-    indexInsertAfterIfFalse,
     indexInsertBeforeIfTrue,
-    indexInsertBeforeIfFalse 
+    // indexInsertAfterIfTrueLabel,
+    scoreIfFalse, 
+    // positionsIfFalse,
+    indexInsertAfterIfFalse,
+    indexInsertBeforeIfFalse,
+    // indexInsertAfterIfFalseLabel,
+
+    indexRedirect,
+    indexRedirectNext,
+
+    choices,
   } = req.body; // not using limitKeys here, because it is more useful to split into multiple individual variables
+  
   let correct = false;
   let scoreNew = scorePrior;
-  let indexInsertAfter, indexRedirect, indexNextNew, indexRedirectNext, answers, version;
+  let indexInsertAfter, indexNextNew, answers, version, scoreQuizNew;
+  console.log('choices from body',choices);
   const formattedChoices = (choices).sort((a,b) => a-b).join(','); 
   console.log( 'idUser',idUser,
     'idQuiz', idQuiz,
@@ -157,20 +168,13 @@ router.put('/:idQuestion', jwtAuth, (req, res) => {
       console.log('indexInsertAfter',indexInsertAfter);
       indexNextNew = correct ? indexInsertBeforeIfTrue : indexInsertBeforeIfFalse;
       console.log('indexNextNew',indexNextNew);
-
-      // FIND REDIRECT (WHAT POINTS TO CURRENT QUESTION NOW)
-      return Question.find(
-        {idQuiz: ObjectId(idQuiz),
-          accepted: true,
-          indexNext: indexCurrent}
-      );
     })
+
     // UPDATE REDIRECT
-    .then(redirectFound=>{
-      console.log('redirectFound', redirectFound);
-      indexRedirect = redirectFound[0].index;
-      indexRedirectNext = indexNextPrior;
-      console.log('indexRedirect', indexRedirect);
+    .then(()=>{
+      console.log('idQuiz',idQuiz);
+      console.log('indexRedirect',indexRedirect);
+
       return Question.update(
         {idQuiz: ObjectId(idQuiz),
           accepted: true,
@@ -205,9 +209,8 @@ router.put('/:idQuestion', jwtAuth, (req, res) => {
       return Question.find(
         {idQuiz: ObjectId(idQuiz),
           accepted: true,
-          index: indexInsertAfter})
+          index: indexInsertAfter});
     })
-
 
   // UPDATE QUIZ CURRENT INDEX
     .then(questionInsertAfter=>{
@@ -219,9 +222,13 @@ router.put('/:idQuestion', jwtAuth, (req, res) => {
     })
     // UPDATE QUIZ CURRENT INDEX
     .then(quizFound=>{
-      console.log('Quiz found', quizFound);
+      scoreQuizNew = quizFound.score - scorePrior + scoreNew;
+      console.log('quizFound', quizFound, 'Quiz found score', quizFound.score);
       return Quiz.findByIdAndUpdate(idQuiz,
-        { $set: {indexCurrent: indexNextPrior}},
+        { $set: {
+          indexCurrent: indexNextPrior,
+          score: scoreQuizNew,
+        }},
         {new: true});
     })
 
@@ -230,7 +237,6 @@ router.put('/:idQuestion', jwtAuth, (req, res) => {
       console.log('quizupdated');
       return Choice.create({idUser, idQuiz, idQuestion, choices, correct, version, score: scoreNew}, {new: true});
     })
-
 
     // RESPONSE TO CLIENT
     .then(choiceCreated => {
@@ -244,6 +250,7 @@ router.put('/:idQuestion', jwtAuth, (req, res) => {
         scoreNew,
         indexNextNew,
         indexRedirectNext,
+        scoreQuizNew,
       };
       console.log('response',response);
       res.status(200).json(response);

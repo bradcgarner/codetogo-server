@@ -107,6 +107,237 @@ const questions = [
     ],
     reason: 'because I just know!',
   },
+  {
+    question: 'how did 6 chicken cross the street?',
+    typeQuestion: 'trivia',
+    answers: [
+      { option: 'a good option', correct: true },
+      { option: 'a bad option' }
+    ],
+    typeAnswer: 'radio',
+    source: [
+      'The Google',
+      'bradgarner.com'
+    ],
+    reason: 'because I just know!',
+    difficulty: 3,
+  },
+  {
+    question: 'how did 7 chicken cross the street?',
+    typeQuestion: 'trivia',
+    answers: [
+      { option: 'a good option', correct: true },
+      { option: 'a bad option' }
+    ],
+    typeAnswer: 'radio',
+    source: [
+      'The Google',
+      'bradgarner.com'
+    ],
+    reason: 'because I just know!',
+    difficulty: 3,
+  },
+  {
+    question: 'how did 8 chicken cross the street?',
+    typeQuestion: 'trivia',
+    answers: [
+      { option: 'a good option', correct: true },
+      { option: 'a bad option' }
+    ],
+    typeAnswer: 'radio',
+    source: [
+      'The Google',
+      'bradgarner.com'
+    ],
+    reason: 'because I just know!',
+    difficulty: 3,
+  },
+  {
+    question: 'how did 9 chicken cross the street?',
+    typeQuestion: 'trivia',
+    answers: [
+      { option: 'a good option', correct: true },
+      { option: 'a bad option' }
+    ],
+    typeAnswer: 'radio',
+    source: [
+      'The Google',
+      'bradgarner.com'
+    ],
+    reason: 'because I just know!',
+  },
+  {
+    question: 'how did 10 chicken cross the street?',
+    typeQuestion: 'trivia',
+    answers: [
+      { option: 'a good option', correct: true },
+      { option: 'a bad option' }
+    ],
+    typeAnswer: 'radio',
+    source: [
+      'The Google',
+      'bradgarner.com'
+    ],
+    reason: 'because I just know!',
+  },
+  {
+    question: 'how did 11 chicken cross the street?',
+    typeQuestion: 'trivia',
+    answers: [
+      { option: 'a good option', correct: true },
+      { option: 'a bad option' }
+    ],
+    typeAnswer: 'radio',
+    source: [
+      'The Google',
+      'bradgarner.com'
+    ],
+    reason: 'because I just know!',
+  },
+  {
+    question: 'how did 12 chicken cross the street?',
+    typeQuestion: 'trivia',
+    answers: [
+      { option: 'a good option', correct: true },
+      { option: 'a bad option' }
+    ],
+    typeAnswer: 'radio',
+    source: [
+      'The Google',
+      'bradgarner.com'
+    ],
+    reason: 'because I just know!',
+    difficulty: 3,
+  },
+  {
+    question: 'how did 13 chicken cross the street?',
+    typeQuestion: 'trivia',
+    answers: [
+      { option: 'a good option', correct: true },
+      { option: 'a bad option' }
+    ],
+    typeAnswer: 'radio',
+    source: [
+      'The Google',
+      'bradgarner.com'
+    ],
+    reason: 'because I just know!',
+  },
+  {
+    question: 'how did 14 chicken cross the street?',
+    typeQuestion: 'trivia',
+    answers: [
+      { option: 'a good option', correct: true },
+      { option: 'a bad option' }
+    ],
+    typeAnswer: 'radio',
+    source: [
+      'The Google',
+      'bradgarner.com'
+    ],
+    reason: 'because I just know!',
+  },
+  {
+    question: 'how did 15 chicken cross the street?',
+    typeQuestion: 'trivia',
+    answers: [
+      { option: 'a good option', correct: true },
+      { option: 'a bad option' }
+    ],
+    typeAnswer: 'radio',
+    source: [
+      'The Google',
+      'bradgarner.com'
+    ],
+    reason: 'because I just know!',
+  },
+  {
+    question: 'how did 16 chicken cross the street?',
+    typeQuestion: 'trivia',
+    answers: [
+      { option: 'a good option', correct: true },
+      { option: 'a bad option' }
+    ],
+    typeAnswer: 'radio',
+    source: [
+      'The Google',
+      'bradgarner.com'
+    ],
+    reason: 'because I just know!',
+    difficulty: 3,
+  },
+  {
+    question: 'how did 17 chicken cross the street?',
+    typeQuestion: 'trivia',
+    answers: [
+      { option: 'a good option', correct: true },
+      { option: 'a bad option' }
+    ],
+    typeAnswer: 'radio',
+    source: [
+      'The Google',
+      'bradgarner.com'
+    ],
+    reason: 'because I just know!',
+    difficulty: 3,
+  },
+  {
+    question: 'how did 18 chicken cross the street?',
+    typeQuestion: 'trivia',
+    answers: [
+      { option: 'a good option', correct: true },
+      { option: 'a bad option' }
+    ],
+    typeAnswer: 'radio',
+    source: [
+      'The Google',
+      'bradgarner.com'
+    ],
+    reason: 'because I just know!',
+    difficulty: 3,
+  },
+  {
+    question: 'how did 19 chicken cross the street?',
+    typeQuestion: 'trivia',
+    answers: [
+      { option: 'a good option', correct: true },
+      { option: 'a bad option' }
+    ],
+    typeAnswer: 'radio',
+    source: [
+      'The Google',
+      'bradgarner.com'
+    ],
+    reason: 'because I just know!',
+  },
+  {
+    question: 'how did 20 chicken cross the street?',
+    typeQuestion: 'trivia',
+    answers: [
+      { option: 'a good option', correct: true },
+      { option: 'a bad option' }
+    ],
+    typeAnswer: 'radio',
+    source: [
+      'The Google',
+      'bradgarner.com'
+    ],
+    reason: 'because I just know!',
+  },
+  {
+    question: 'how did 21 chicken cross the street?',
+    typeQuestion: 'trivia',
+    answers: [
+      { option: 'a good option', correct: true },
+      { option: 'a bad option' }
+    ],
+    typeAnswer: 'radio',
+    source: [
+      'The Google',
+      'bradgarner.com'
+    ],
+    reason: 'because I just know!',
+  },
 ];
 
 const formatQuestions = (questions, idQuiz) => {
